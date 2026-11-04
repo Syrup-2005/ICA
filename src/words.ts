@@ -1,0 +1,76 @@
+
+const WORDS: Record<number, string[]> = {
+  // Level 1: Short and familiar words
+  1: [
+    'ash', 'calm', 'drift', 'echo', 'faint', 'glow', 'hush', 'mist',
+    'pulse', 'still', 'trace', 'wave', 'vibe', 'mood', 'chill', 'flex',
+    'slay', 'sus', 'based', 'cope', 'yap', 'rizz', 'lore', 'meme',
+    'clutch', 'nerf', 'buff', 'loot', 'grind', 'spawn', 'quest', 'noob',
+    'cringe', 'based', 'viral', 'hype', 'ratio', 'ghost', 'simp', 'yeet',
+    'bruh', 'goat', 'cap', 'bet', 'fam', 'lowkey', 'highkey', 'valid',
+  ],
+
+  // Level 2: Medium-length words
+  2: [
+    'anchor', 'breeze', 'canvas', 'distant', 'ember', 'frozen',
+    'gentle', 'hollow', 'motion', 'silver', 'velvet', 'window',
+    'delulu', 'cooked', 'midkey', 'aesthetic', 'wholesome', 'chaotic',
+    'awkward', 'unhinged', 'legend', 'griefer', 'speedrun', 'payload',
+    'respawn', 'sandbox', 'headshot', 'loadout', 'sidequest', 'backseat',
+    'glazing', 'capping', 'yapping', 'locked', 'cooking', 'cursed',
+    'blessed', 'savage', 'iconic', 'random', 'energy', 'vibing',
+    'offline', 'scrolling', 'lurking', 'cracked', 'washed',
+  ],
+
+  // Level 3: Long words
+  3: [
+    'afterglow', 'blueprint', 'daydream', 'evergreen', 'fragments',
+    'midnight', 'overcast', 'quietly', 'remember', 'threshold',
+    'algorithm', 'attention', 'catastrophe', 'community', 'confidence',
+    'connection', 'delusional', 'discovery', 'emotional', 'eventually',
+    'existential', 'fascinating', 'friendship', 'generation',
+    'impossible', 'incredible', 'influencer', 'irreplaceable',
+    'masterpiece', 'meaningful', 'momentum', 'mysterious',
+    'overthinking', 'perfection', 'phenomenal', 'relatable',
+    'reputation', 'resolution', 'simulation', 'spectacular',
+    'subconscious', 'unexpected', 'vocabulary', 'vulnerability',
+  ],
+
+  // Level 4: Challenging words
+  4: [
+    'architecture', 'constellation', 'disconnected', 'independent',
+    'observation', 'perception', 'recollection', 'transmission',
+    'accountability', 'ambidextrous', 'anachronistic', 'circumstantial',
+    'consequential', 'consciousness', 'contradiction', 'deterioration',
+    'extraordinary', 'inconsequential', 'interpretation',
+    'misconception', 'misunderstanding', 'multidimensional',
+    'overcomplicated', 'philosophical', 'psychological',
+    'reconciliation', 'sophisticated', 'transformation',
+    'unpredictable', 'unprecedented', 'unintentionally',
+    'disproportionate', 'incomprehensible', 'infrastructure',
+    'interconnected', 'metamorphosis', 'simultaneously',
+  ],
+}
+
+// Prevent consecutive duplicate words.
+export function getWord(level: number, previousWord = ''): string {
+  const pool = WORDS[level] ?? WORDS[4]
+
+  if (pool.length === 0) return 'empty'
+  if (pool.length === 1) return pool[0]
+
+  let word = pool[Math.floor(Math.random() * pool.length)]
+
+  while (word === previousWord) {
+    word = pool[Math.floor(Math.random() * pool.length)]
+  }
+
+  return word
+}
+
+export function getDifficulty(completedWords: number): number {
+  if (completedWords >= 60) return 4
+  if (completedWords >= 30) return 3
+  if (completedWords >= 12) return 2
+  return 1
+}
