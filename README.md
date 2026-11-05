@@ -25,6 +25,14 @@ npm run preview
 
 The production website is generated in `dist/`.
 
+## Tests
+
+```bash
+npm test
+```
+
+See `docs/ICA-Project-Guide.md` for architecture and `CHANGELOG.md` for changes.
+
 ## Current MVP features
 
 - Press any key or click to start
