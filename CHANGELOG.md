@@ -7,6 +7,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Docs
 - Phase 2 plan split into **2A: Typing Impact** (researched game-feel plan: feedback ladder, audio synthesis, latency, accessibility, risks) and **2B: Product Polish**.
+- Phase 2A rewritten into a tighter plan with risk-resolving design built into the effect system (cadence damping, effect budget, performance guard, voice limit + compressor, reduced-motion fallback, flash limits), player controls, and done criteria per step.
 
 ## [0.2.0] — 2026-11-05
 
