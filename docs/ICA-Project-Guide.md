@@ -357,15 +357,127 @@ The engine is covered by tests, but browser behaviour (focus, sound, shake) has 
 
 ## 9. Roadmap
 
-### Phase 2: Product Polish (~1 week)
+### Phase 2: Product Polish (~1.5–2 weeks)
+
+Phase 2 has two tracks. **2A (Typing Impact)** comes first because it is the biggest change to how the game feels, and several 2B items (accessibility, mobile) depend on it.
+
+| Track | Focus | Effort |
+|---|---|---|
+| **2A: Typing Impact** | Make each keystroke feel physical and weighty | ~4–5 days |
+| **2B: Product Polish** | Summary screen, balance, mobile, fonts, sharing | ~4–5 days |
+
+---
+
+### Phase 2A: Typing Impact ("Game Feel")
+
+#### 2A.1 Goal
+
+Make every keystroke feel like it **lands**: a press with weight, a word that "clunks" into place, a combo that builds tension. It should still fit ICA's identity: *"A quiet place to find your rhythm."* The aim is **weight, not noise**.
+
+#### 2A.2 Research Summary
+
+| Finding | Source | What it means for ICA |
+|---|---|---|
+| "Juice" (small, layered audio-visual reactions) turns the same mechanics into a satisfying experience. The classic demo is Vlambeer's *The Art of Screenshake* (Jan Willem Nijman, 2013), which shows one shooter with and without juice. | [Wayline: Game Feel & Juice](https://www.wayline.io/learn/game-feel/1), [GMTK: Secrets of Game Feel and Juice](https://amara.org/v/C3BGA) | ICA's mechanics are fine. The missing piece is feedback. |
+| Overusing screen shake numbs players: if every hit shakes, nothing feels big. Feedback should match how significant the event is. | [Juice checklist](https://gamejuice.pages.dev/articles/game-juice-checklist-30-techniques), [itch.io: juicy simple effects](https://itch.io/blog/1059831/making-a-game-feel-juicy-with-simple-effects) | Use an **escalation ladder**: keystroke < word < combo milestone. |
+| **Hitstop** (a brief freeze on impact) sells weight in action games. | [Wayline](https://www.wayline.io/learn/game-feel/1) | Freeze the *visuals* only (a flash hold). **Never block typing.** |
+| **Squash & stretch** from animation adds physicality. | [Juice checklist](https://gamejuice.pages.dev/articles/game-juice-checklist-30-techniques) | Each typed letter gets a small "key press" squash. |
+| Typing games "live or die on latency"; any visible lag makes the game feel broken. Per-keystroke feedback is what makes them satisfying (Z-Type). | [DEV: real-time typing game](https://dev.to/clackpit_dev/i-built-a-real-time-typing-game-with-no-traditional-backend-heres-the-architecture-513h), [Juicy Break / itch.io notes](https://itch.io/post/1722211) | Response must reach the screen and speakers within one frame (~16 ms). |
+| Clear error feedback stops players from "hammering" keys. | [DEV: forced correction](https://dev.to/clackpit_dev/why-i-built-forced-correction-into-my-typing-game-and-why-monkeytype-got-it-wrong-2n8l) | Show the wrong letter briefly, then drop it. |
+| Click sounds come from **filtered noise bursts** (5–15 ms, bandpass ~3–6 kHz). Pure sine oscillators sound like "beeps", not clicks. Use exponential decay. | [UI sound generation guide](https://www.ui-skills.com/skills/raphaelsalaja/generating-sounds-with-ai) | ICA's current sine beeps are why typing feels weightless. |
+| `latencyHint: 'interactive'` (the default) favours low audio latency for user-triggered sound. Browsers may ignore it. | [MDN: AudioContext options](https://developer.mozilla.org/en-US/docs/Web/API/AudioContextOptions), [MDN: baseLatency](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/baseLatency) | Keep one shared context; schedule sounds right away. |
+| The Vibration API works in Chromium (Android) only. **iOS Safari does not support it**, and WebKit opposes it. | [caniuse](https://caniuse.com/mdn-api_navigator_vibrate), [W3C report](https://w3c.github.io/vibration/reports/implementation.html), [Web Features](https://web-platform-dx.github.io/web-features-explorer/features/vibration) | Haptics are an optional extra on Android only. |
+| Motion triggered by interaction must be possible to turn off (WCAG 2.3.3, AAA). The standard mechanism is `prefers-reduced-motion`. | [W3C C39](https://w3.org/WAI/WCAG22/Techniques/css/C39), [Deque 2.3.3](https://dequeuniversity.com/resources/wcag2.1/2.3.3-animations-from-interactions) | Respect the OS setting and add an in-game toggle. |
+
+> Some numbers above (click length, filter ranges) come from practitioner guides, not standards. Treat them as starting points to tune by ear.
+
+#### 2A.3 Design Principles
+
+1. **Escalation ladder:** the bigger the achievement, the bigger the response. A keystroke is subtle; a combo milestone is big.
+2. **Never block input:** effects play *around* typing. The next word accepts input on the same frame.
+3. **Latency first:** effect timing beats effect quality. A plain click with no delay beats a rich sound 50 ms late.
+4. **Variation over repetition:** small random pitch/timing changes stop sounds from becoming "machine-gun" repetitive.
+5. **Minimal aesthetic:** monochrome, short and restrained, so it stays focused rather than flashy.
+6. **Accessible by default:** reduced motion is respected; every layer can be turned off.
+
+#### 2A.4 Feedback Ladder (what happens when)
+
+| Event | Audio | Visual | Haptic (Android) |
+|---|---|---|---|
+| **Correct key** | "Thock": noise click (~8 ms, bandpass ~4 kHz) + low body tone (~150 Hz, ~40 ms decay), ±4% random pitch | The letter "presses": squash (`scaleY .88 → 1`, `translateY 2px → 0`) and dim→bright flash, ~90 ms. Word stage nudges 1 px down. | 8 ms |
+| **Wrong key** | Muted, low-passed thud (dull, not harsh) | Existing shake. The wrong letter appears faintly in the expected slot, struck through, and drops away (~200 ms) | 20 ms |
+| **Word complete** | Deeper "chunk" + tone whose **pitch rises with combo** (one semitone per step, wrapping each octave) | Word "punches" (scale 1.06) and slides up/out as the next word slides in, both ≤120 ms. Meter refill snaps with a short glow, plus a ~50 ms visual hold (hitstop) | 15 ms |
+| **Combo +1** | (included in word complete) | COMBO number pops (scale 1.3 → 1) | — |
+| **Combo milestone (every 10)** | Bright chime (existing 880 Hz idea, layered) | Stronger stage kick (3 px), brief full-width flash of the meter | 30 ms |
+| **Combo break** | Soft descending "crack" | COMBO number drops and dims | — |
+| **Danger (survival < 1.5 s)** | Quiet heartbeat pulse, ~1 per 600 ms | Meter pulses; word brightens slightly | — |
+
+All values live in one tuning file so they can be adjusted by ear without touching logic.
+
+#### 2A.5 Technical Design
+
+| Piece | Where | Notes |
+|---|---|---|
+| Richer engine events | `game/engine.ts` | Add `'comboBreak'` feedback (emitted by `advance` when a live combo expires). Milestone and danger are derived from `combo` and `health` in the UI. Unit tested. |
+| Sound synthesis | `src/feel/audio.ts` | Replaces `useSound`. Pre-builds one noise buffer; voices for `thock`, `thud`, `chunk`, `chime`, `crack`, `heartbeat`; master gain/volume. No audio files, so the bundle size is unchanged. |
+| Effect timing | `src/feel/useFeel.ts` | Maps feedback → audio + visual + haptic. Uses **`useLayoutEffect`**, so effects fire before paint instead of one frame late (today's `useEffect`). |
+| Restarting animations | `PlayScreen.tsx` | Put `key={feedbackId}` on the last typed letter's `<span>` so its CSS animation replays on every keystroke. The hidden input is a separate element and keeps focus. |
+| Animations | `styles.css` | Only `transform` and `opacity` (GPU-friendly, no layout work). |
+| Haptics | `src/feel/haptics.ts` | `navigator.vibrate?.(ms)` behind a feature check; no-op elsewhere. |
+| Tuning | `src/feel/config.ts` | All durations, pitches, intensities. |
+| Settings | Top bar | `EFFECTS: FULL / SUBTLE / OFF` and the existing sound toggle. The default follows `prefers-reduced-motion` (reduce → SUBTLE: no shake, kick or squash; colour flashes stay). Saved via `storage.ts`. |
+
+#### 2A.6 Implementation Order
+
+| Step | Deliverable | Why this order |
+|---|---|---|
+| 1 | Move sound to `useLayoutEffect`; measure key → sound/visual latency | Fix responsiveness before adding anything |
+| 2 | New sound voices (thock, thud, chunk with combo pitch) | Biggest impact per hour |
+| 3 | Letter press + wrong-letter ghost + word transition | Visual weight per keystroke |
+| 4 | Escalation: combo pop, milestone, combo break (engine event + test) | Builds tension and reward |
+| 5 | Danger state (heartbeat + meter pulse) | Makes running low feel tense |
+| 6 | Effects setting + reduced motion + haptics | Accessibility and mobile |
+| 7 | Playtest and tune `config.ts` | Feel is tuned by playing, not by code |
+
+#### 2A.7 Risks & Mitigations
+
+| Risk | Mitigation |
+|---|---|
+| **Too much:** effects clash with the "quiet" identity or tire players | Escalation ladder; SUBTLE default for reduced motion; playtest a 5-minute session for fatigue |
+| **Added latency** makes typing feel worse | `useLayoutEffect`; transform/opacity only; measure in the DevTools Performance panel; drop any effect that costs a frame |
+| **Audio fatigue** from repeated sounds | Pitch variation; low master volume; short envelopes |
+| **Motion sickness** | `prefers-reduced-motion` + EFFECTS toggle (WCAG 2.3.3) |
+| **Safari audio quirks** (context starts suspended) | Create/resume the context on the first key press, which is already a user gesture |
+| **Inconsistent haptics** (none on iOS) | Optional extra only; nothing depends on it |
+| **Low-end mobile performance** | No canvas/particles in 2A; CSS-only; test on one mid-range Android |
+| **Scope creep** (sound packs, particles, themes) | Out of scope for 2A; listed below as future ideas |
+
+#### 2A.8 Open Decision
+
+- **Sound default:** sound is currently **OFF** by default, which hides most of the new impact. Option: default **ON** at low volume, unlocked by the first key press. This is a product decision to confirm before step 2.
+
+#### 2A.9 Done When
+
+- [ ] Key → sound and key → visual each land within one frame (checked in a Performance trace)
+- [ ] All seven ladder events implemented and tuned in `config.ts`
+- [ ] Reduced motion verified (OS setting → no shake/kick/squash)
+- [ ] Engine tests cover `comboBreak`; all tests and CI pass
+- [ ] Playtest: 3+ people agree typing "feels better" in a side-by-side comparison with v0.2.0
+
+#### 2A.10 Out of Scope (future ideas)
+Selectable sound packs, particle bursts, background reactions/themes, music that reacts to combo.
+
+---
+
+### Phase 2B: Product Polish
 
 | Area | Task | Issue |
 |---|---|---|
-| Game-over summary | Words, best combo, accuracy, time, WPM, "new best!" | #7 |
+| Game-over summary | Words, best combo, accuracy, time, WPM, "new best!" (reuses the 2A milestone effect) | #7 |
 | Balance | Survival refill scales with word length (engine constant + test) | #5 |
 | Mobile | Visible tap area so the keyboard opens | #4 |
 | Fonts | Self-host (`@fontsource/*`) | #8 |
-| Accessibility | `prefers-reduced-motion`, `aria-live` word, focus outlines | — |
+| Accessibility | `aria-live` word, focus outlines (reduced motion done in 2A) | — |
 | Sharing | Favicon, Open Graph image, web manifest | — |
 | E2E | One Playwright smoke test | Deferred from Phase 1 |
 

@@ -3,6 +3,11 @@
 All notable changes to ICA are recorded here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Docs
+- Phase 2 plan split into **2A: Typing Impact** (researched game-feel plan: feedback ladder, audio synthesis, latency, accessibility, risks) and **2B: Product Polish**.
+
 ## [0.2.0] — 2026-11-05
 
 Covers **Phase 0** (make it deployable) and **Phase 1** (refactor and tests). Gameplay rules and visuals are unchanged.
