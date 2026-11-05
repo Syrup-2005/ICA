@@ -6,7 +6,7 @@ const WORDS: Record<number, string[]> = {
     'pulse', 'still', 'trace', 'wave', 'vibe', 'mood', 'chill', 'flex',
     'slay', 'sus', 'based', 'cope', 'yap', 'rizz', 'lore', 'meme',
     'clutch', 'nerf', 'buff', 'loot', 'grind', 'spawn', 'quest', 'noob',
-    'cringe', 'based', 'viral', 'hype', 'ratio', 'ghost', 'simp', 'yeet',
+    'cringe', 'viral', 'hype', 'ratio', 'ghost', 'simp', 'yeet',
     'bruh', 'goat', 'cap', 'bet', 'fam', 'lowkey', 'highkey', 'valid',
   ],
 
@@ -14,33 +14,34 @@ const WORDS: Record<number, string[]> = {
   2: [
     'anchor', 'breeze', 'canvas', 'distant', 'ember', 'frozen',
     'gentle', 'hollow', 'motion', 'silver', 'velvet', 'window',
-    'delulu', 'cooked', 'midkey', 'aesthetic', 'wholesome', 'chaotic',
+    'delulu', 'cooked', 'midkey', 'chaotic',
     'awkward', 'unhinged', 'legend', 'griefer', 'speedrun', 'payload',
-    'respawn', 'sandbox', 'headshot', 'loadout', 'sidequest', 'backseat',
+    'respawn', 'sandbox', 'headshot', 'loadout', 'backseat',
     'glazing', 'capping', 'yapping', 'locked', 'cooking', 'cursed',
     'blessed', 'savage', 'iconic', 'random', 'energy', 'vibing',
-    'offline', 'scrolling', 'lurking', 'cracked', 'washed',
+    'offline', 'lurking', 'cracked', 'washed',
+    'daydream', 'midnight', 'overcast', 'quietly', 'remember', 'momentum',
   ],
 
   // Level 3: Long words
   3: [
-    'afterglow', 'blueprint', 'daydream', 'evergreen', 'fragments',
-    'midnight', 'overcast', 'quietly', 'remember', 'threshold',
+    'afterglow', 'blueprint', 'evergreen', 'fragments', 'threshold',
+    'aesthetic', 'wholesome', 'sidequest', 'scrolling',
     'algorithm', 'attention', 'catastrophe', 'community', 'confidence',
     'connection', 'delusional', 'discovery', 'emotional', 'eventually',
     'existential', 'fascinating', 'friendship', 'generation',
-    'impossible', 'incredible', 'influencer', 'irreplaceable',
-    'masterpiece', 'meaningful', 'momentum', 'mysterious',
+    'impossible', 'incredible', 'influencer',
+    'masterpiece', 'meaningful', 'mysterious',
     'overthinking', 'perfection', 'phenomenal', 'relatable',
     'reputation', 'resolution', 'simulation', 'spectacular',
-    'subconscious', 'unexpected', 'vocabulary', 'vulnerability',
+    'subconscious', 'unexpected', 'vocabulary',
+    'architecture', 'disconnected', 'independent', 'observation',
+    'perception', 'recollection', 'transmission', 'ambidextrous',
   ],
 
   // Level 4: Challenging words
   4: [
-    'architecture', 'constellation', 'disconnected', 'independent',
-    'observation', 'perception', 'recollection', 'transmission',
-    'accountability', 'ambidextrous', 'anachronistic', 'circumstantial',
+    'constellation', 'accountability', 'anachronistic', 'circumstantial',
     'consequential', 'consciousness', 'contradiction', 'deterioration',
     'extraordinary', 'inconsequential', 'interpretation',
     'misconception', 'misunderstanding', 'multidimensional',
@@ -49,6 +50,7 @@ const WORDS: Record<number, string[]> = {
     'unpredictable', 'unprecedented', 'unintentionally',
     'disproportionate', 'incomprehensible', 'infrastructure',
     'interconnected', 'metamorphosis', 'simultaneously',
+    'irreplaceable', 'vulnerability',
   ],
 }
 

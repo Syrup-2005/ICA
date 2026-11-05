@@ -24,7 +24,6 @@ function App() {
   const [correctCharacters, setCorrectCharacters] = useState(0)
   const [mistakes, setMistakes] = useState(0)
   const [elapsed, setElapsed] = useState(0)
-  const [comboRemaining, setComboRemaining] = useState(COMBO_WINDOW)
   const [healthRemaining, setHealthRemaining] = useState(MAX_HEALTH)
   const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem(SOUND_KEY) === 'true')
   const [wrongInput, setWrongInput] = useState(false)
@@ -33,6 +32,7 @@ function App() {
   const lastCompletedAtRef = useRef<number | null>(null)
   const lastHealthTickRef = useRef<number | null>(null)
   const healthRemainingRef = useRef(MAX_HEALTH)
+  const pausedAtRef = useRef<number | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
 
   const level = getDifficulty(wordsCompleted)
@@ -78,11 +78,23 @@ function App() {
       healthRemainingRef.current = MAX_HEALTH
       lastHealthTickRef.current = Date.now()
     }
+    if (screen === 'paused' && pausedAtRef.current !== null) {
+      // Shift timers forward so paused time doesn't count.
+      const pausedFor = Date.now() - pausedAtRef.current
+      if (startedAtRef.current !== null) startedAtRef.current += pausedFor
+      if (lastCompletedAtRef.current !== null) lastCompletedAtRef.current += pausedFor
+    }
+    pausedAtRef.current = null
     lastHealthTickRef.current = Date.now()
 
   setScreen('playing')
   window.setTimeout(() => inputRef.current?.focus(), 0)
   }, [screen])
+
+  const pauseGame = useCallback(() => {
+    pausedAtRef.current = Date.now()
+    setScreen('paused')
+  }, [])
 
   const restartGame = useCallback(() => {
     setScreen('ready')
@@ -93,10 +105,10 @@ function App() {
     setElapsed(0)
     setTyped('')
     setWord(getWord(1))
-    setComboRemaining(COMBO_WINDOW)
     setHealthRemaining(MAX_HEALTH)
     healthRemainingRef.current = MAX_HEALTH
     lastHealthTickRef.current = null
+    pausedAtRef.current = null
     startedAtRef.current = null
     lastCompletedAtRef.current = null
   }, [])
@@ -131,16 +143,10 @@ function App() {
       }
     }
 
-    // Update the separate combo timer.
-    if (lastCompletedAtRef.current === null) {
-      setComboRemaining(COMBO_WINDOW)
-      return
-    }
+    // Reset the combo once its window expires.
+    if (lastCompletedAtRef.current === null) return
 
-    const remaining = COMBO_WINDOW - (now - lastCompletedAtRef.current)
-    setComboRemaining(Math.max(0, remaining))
-
-    if (remaining <= 0) {
+    if (now - lastCompletedAtRef.current >= COMBO_WINDOW) {
       setCombo(0)
       lastCompletedAtRef.current = null
     }
@@ -163,7 +169,7 @@ function App() {
     if (screen !== 'playing') return
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setScreen('paused')
+        pauseGame()
         return
       }
       if (event.key === 'Tab' || event.key === 'Alt' || event.key === 'Control' || event.key === 'Meta') return
@@ -171,7 +177,7 @@ function App() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [screen])
+  }, [screen, pauseGame])
 
   function handleTyping(value: string) {
     if (screen !== 'playing') return
@@ -220,7 +226,6 @@ function App() {
       }
       setWordsCompleted((count) => count + 1)
       lastCompletedAtRef.current = now
-      setComboRemaining(COMBO_WINDOW)
       playTone(nextCombo > 0 && nextCombo % 10 === 0 ? 880 : 620, 0.11)
       setWord(getWord(getDifficulty(wordsCompleted + 1), word))
       setTyped('')
@@ -245,7 +250,7 @@ function App() {
           <button className="quiet-button" onClick={toggleSound} aria-pressed={soundEnabled}>
             SOUND {soundEnabled ? 'ON' : 'OFF'}
           </button>
-          {screen === 'playing' && <button className="quiet-button" onClick={() => setScreen('paused')}>PAUSE</button>}
+          {screen === 'playing' && <button className="quiet-button" onClick={pauseGame}>PAUSE</button>}
         </div>
       </header>
 
