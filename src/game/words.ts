@@ -1,5 +1,7 @@
+export const MAX_LEVEL = 4
 
-const WORDS: Record<number, string[]> = {
+// Word pools by level. Lengths: L1 3–7, L2 5–8, L3 9–12, L4 13+ (enforced by tests).
+export const WORDS: Record<number, string[]> = {
   // Level 1: Short and familiar words
   1: [
     'ash', 'calm', 'drift', 'echo', 'faint', 'glow', 'hush', 'mist',
@@ -54,20 +56,12 @@ const WORDS: Record<number, string[]> = {
   ],
 }
 
-// Prevent consecutive duplicate words.
-export function getWord(level: number, previousWord = ''): string {
-  const pool = WORDS[level] ?? WORDS[4]
-
-  if (pool.length === 0) return 'empty'
-  if (pool.length === 1) return pool[0]
-
-  let word = pool[Math.floor(Math.random() * pool.length)]
-
-  while (word === previousWord) {
-    word = pool[Math.floor(Math.random() * pool.length)]
-  }
-
-  return word
+// Random word for a level, never repeating the previous word.
+// `random` returns a number in [0, 1); injectable so the engine stays deterministic.
+export function getWord(level: number, previousWord = '', random: () => number = Math.random): string {
+  const pool = WORDS[level] ?? WORDS[MAX_LEVEL]
+  const candidates = pool.length > 1 ? pool.filter((word) => word !== previousWord) : pool
+  return candidates[Math.floor(random() * candidates.length)]
 }
 
 export function getDifficulty(completedWords: number): number {
