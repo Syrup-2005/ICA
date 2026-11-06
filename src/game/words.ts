@@ -1,59 +1,26 @@
+// Word lists live in plain-text files (src/game/wordlists/level-N.txt), one word per line.
+// They are bundled at build time (`?raw`), so the game never needs a network request for words.
+import level1 from './wordlists/level-1.txt?raw'
+import level2 from './wordlists/level-2.txt?raw'
+import level3 from './wordlists/level-3.txt?raw'
+import level4 from './wordlists/level-4.txt?raw'
+
 export const MAX_LEVEL = 4
 
-// Word pools by level. Lengths: L1 3–7, L2 5–8, L3 9–12, L4 13+ (enforced by tests).
+// Trims and lowercases each line; skips blank lines and `#` comments.
+// Validity (a–z only, length per level, no duplicates) is enforced by words.test.ts.
+export function parseWordList(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim().toLowerCase())
+    .filter((line) => line !== '' && !line.startsWith('#'))
+}
+
 export const WORDS: Record<number, string[]> = {
-  // Level 1: Short and familiar words
-  1: [
-    'ash', 'calm', 'drift', 'echo', 'faint', 'glow', 'hush', 'mist',
-    'pulse', 'still', 'trace', 'wave', 'vibe', 'mood', 'chill', 'flex',
-    'slay', 'sus', 'based', 'cope', 'yap', 'rizz', 'lore', 'meme',
-    'clutch', 'nerf', 'buff', 'loot', 'grind', 'spawn', 'quest', 'noob',
-    'cringe', 'viral', 'hype', 'ratio', 'ghost', 'simp', 'yeet',
-    'bruh', 'goat', 'cap', 'bet', 'fam', 'lowkey', 'highkey', 'valid',
-  ],
-
-  // Level 2: Medium-length words
-  2: [
-    'anchor', 'breeze', 'canvas', 'distant', 'ember', 'frozen',
-    'gentle', 'hollow', 'motion', 'silver', 'velvet', 'window',
-    'delulu', 'cooked', 'midkey', 'chaotic',
-    'awkward', 'unhinged', 'legend', 'griefer', 'speedrun', 'payload',
-    'respawn', 'sandbox', 'headshot', 'loadout', 'backseat',
-    'glazing', 'capping', 'yapping', 'locked', 'cooking', 'cursed',
-    'blessed', 'savage', 'iconic', 'random', 'energy', 'vibing',
-    'offline', 'lurking', 'cracked', 'washed',
-    'daydream', 'midnight', 'overcast', 'quietly', 'remember', 'momentum',
-  ],
-
-  // Level 3: Long words
-  3: [
-    'afterglow', 'blueprint', 'evergreen', 'fragments', 'threshold',
-    'aesthetic', 'wholesome', 'sidequest', 'scrolling',
-    'algorithm', 'attention', 'catastrophe', 'community', 'confidence',
-    'connection', 'delusional', 'discovery', 'emotional', 'eventually',
-    'existential', 'fascinating', 'friendship', 'generation',
-    'impossible', 'incredible', 'influencer',
-    'masterpiece', 'meaningful', 'mysterious',
-    'overthinking', 'perfection', 'phenomenal', 'relatable',
-    'reputation', 'resolution', 'simulation', 'spectacular',
-    'subconscious', 'unexpected', 'vocabulary',
-    'architecture', 'disconnected', 'independent', 'observation',
-    'perception', 'recollection', 'transmission', 'ambidextrous',
-  ],
-
-  // Level 4: Challenging words
-  4: [
-    'constellation', 'accountability', 'anachronistic', 'circumstantial',
-    'consequential', 'consciousness', 'contradiction', 'deterioration',
-    'extraordinary', 'inconsequential', 'interpretation',
-    'misconception', 'misunderstanding', 'multidimensional',
-    'overcomplicated', 'philosophical', 'psychological',
-    'reconciliation', 'sophisticated', 'transformation',
-    'unpredictable', 'unprecedented', 'unintentionally',
-    'disproportionate', 'incomprehensible', 'infrastructure',
-    'interconnected', 'metamorphosis', 'simultaneously',
-    'irreplaceable', 'vulnerability',
-  ],
+  1: parseWordList(level1),
+  2: parseWordList(level2),
+  3: parseWordList(level3),
+  4: parseWordList(level4),
 }
 
 // Random word for a level, never repeating the previous word.

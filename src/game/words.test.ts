@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_LEVEL, WORDS, getDifficulty, getWord } from './words'
+import { MAX_LEVEL, WORDS, getDifficulty, getWord, parseWordList } from './words'
+
+describe('parseWordList', () => {
+  it('trims, lowercases and skips blank lines and # comments (LF and CRLF)', () => {
+    const text = '# header\r\n\r\n  Calm  \r\nDRIFT\n# note\n\nhush\n'
+    expect(parseWordList(text)).toEqual(['calm', 'drift', 'hush'])
+  })
+})
 
 const LENGTH_RANGES: Record<number, [number, number]> = { 1: [3, 7], 2: [5, 8], 3: [9, 12], 4: [13, Infinity] }
 

@@ -1,0 +1,53 @@
+# ICA word list: level 3 (long words)
+#
+# One word per line. Lines starting with # and blank lines are ignored.
+# Rules (checked by `npm test`): letters a–z only, 9–12 letters,
+# no duplicates across levels.
+afterglow
+blueprint
+evergreen
+fragments
+threshold
+aesthetic
+wholesome
+sidequest
+scrolling
+algorithm
+attention
+catastrophe
+community
+confidence
+connection
+delusional
+discovery
+emotional
+eventually
+existential
+fascinating
+friendship
+generation
+impossible
+incredible
+influencer
+masterpiece
+meaningful
+mysterious
+overthinking
+perfection
+phenomenal
+relatable
+reputation
+resolution
+simulation
+spectacular
+subconscious
+unexpected
+vocabulary
+architecture
+disconnected
+independent
+observation
+perception
+recollection
+transmission
+ambidextrous

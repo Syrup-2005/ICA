@@ -1,0 +1,54 @@
+# ICA word list: level 2 (medium-length words)
+#
+# One word per line. Lines starting with # and blank lines are ignored.
+# Rules (checked by `npm test`): letters a–z only, 5–8 letters,
+# no duplicates across levels.
+anchor
+breeze
+canvas
+distant
+ember
+frozen
+gentle
+hollow
+motion
+silver
+velvet
+window
+delulu
+cooked
+midkey
+chaotic
+awkward
+unhinged
+legend
+griefer
+speedrun
+payload
+respawn
+sandbox
+headshot
+loadout
+backseat
+glazing
+capping
+yapping
+locked
+cooking
+cursed
+blessed
+savage
+iconic
+random
+energy
+vibing
+offline
+lurking
+cracked
+washed
+daydream
+midnight
+overcast
+quietly
+remember
+momentum
