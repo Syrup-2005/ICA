@@ -2,7 +2,7 @@
 
 > **Baseline:** v0.2.0, live on Netlify · **Scope:** improvements, polish and engagement features after Phase 1
 > **Companions:** [`ROADMAP.md`](./ROADMAP.md) (overview) · [`ICA-Project-Guide.md`](./ICA-Project-Guide.md) (architecture, Phase 2A detail) · [`../CHANGELOG.md`](../CHANGELOG.md)
-> **Last updated:** 2026-11-06 · **Status:** plan only, nothing in this document has been implemented yet
+> **Last updated:** 2026-11-06 · **Status:** R0 implemented on branch `r0-foundation` except R0.1 and R0.7, which need owner input (§5.1). R1 onward is plan only.
 
 ---
 
@@ -69,10 +69,10 @@ ICA is **a quiet, endless typing arcade**: one word at a time, monochrome, no ba
 | Fact | Status |
 |---|---|
 | `main` contains Phase 0 + Phase 1 (PR #1 merged; v0.2.0) | ✅ Verified in git |
-| No `netlify.toml` in the repo | ✅ Verified. Netlify runs on dashboard settings. |
+| `netlify.toml` | Added in R0 (branch `r0-foundation`). Once merged it overrides the dashboard build settings. |
 | Netlify's build command, publish directory, Node version, deploy branch | ❓ **Not visible to me.** Check the Netlify dashboard (task R0.1). |
 | Behaviour on real phones and in Safari/Firefox | ❓ Never tested; only unit-tested and built |
-| Browser play-through of v0.2.0 (focus, sound, shake) | ❓ Not recorded as done |
+| Browser behaviour | ✅ Automated checks in real Chrome during R0: typing, auto-pause, resume, CSP, fonts. ❓ Sound/shake by hand and real phones still to do. |
 
 ### 2.2 Gaps found in the code
 
@@ -98,7 +98,7 @@ ICA is **a quiet, endless typing arcade**: one word at a time, monochrome, no ba
 | E1 | **React re-renders 20×/s** | `useInterval(tick, 50)` creates new state every tick; only the meter, SURVIVAL (10/s) and TIME (1/s) change visibly | Wasted CPU and battery; less headroom for effects |
 | E2 | **Meter animates `width`** | `transition: width .06s linear` | Layout and paint every frame |
 | E3 | **Wall-clock time** | `Date.now()` in every dispatch | A system clock change can jump survival |
-| E4 | **Fonts over-requested and remote** | 5 weights requested, 2 families used; Google request chain | ~38% of first load once self-hosted; third-party dependency |
+| E4 | **Fonts remote** (fixed in R0) | Two Google origins plus a render-blocking CSS hop. Unused weights were requested, but browsers download only the faces used, so no bytes were wasted. | ~38% of first load once self-hosted; third-party dependency |
 
 ---
 
@@ -148,15 +148,32 @@ Foundation  ──▶  Typing Impact ─▶ Run Experience ─▶ Content &  ─
 | …of which React + ReactDOM | 217.7 kB raw · 67.5 kB gzip · 58.0 kB brotli | bundled alone with esbuild |
 | …so ICA's own code | ≈ 12 kB raw (≈ 4.6 kB gzip), **about 6% of the JS** | difference of the two |
 | CSS | 3.6 kB raw · 1.4 kB gzip | build |
-| Fonts today | Remote (Google Fonts): an extra request chain. Requested but **unused**: DM Mono 500, Manrope 600/700 | CSS inspected |
+| Fonts before R0 | Remote (Google Fonts): 2 extra origins + a CSS hop. Unused weights were requested, but Chrome downloaded only the used faces (24.5 + 14.6 KiB) | measured in Chrome |
 | Fonts if self-hosted, used weights only | Manrope variable (Latin) 24.3 kB + DM Mono 400 (Latin) 14.5 kB ≈ **39 kB** woff2 | font packages inspected |
 | First-load transfer after R0 (estimate) | ≈ 102 kB: 62 JS + 39 fonts + ~1 CSS/HTML. **Fonts ≈ 38%.** | sum |
 | Preact alternative | Preact + compat for the hooks ICA uses: 7.1 kB gzip · 6.4 kB brotli (React: 67.5 / 58.0). Estimated first load ≈ 50 kB. | bundled in isolation; **a whole-app swap was not built or tested** |
-| React renders while playing | **20 per second** | read from code (`useInterval(tick, 50)`, new state every tick); not profiled |
+| React renders while playing | **20 per second** | measured in Chrome with a React commit counter; matches the code (`useInterval(tick, 50)`) |
 | DM Mono character width | 0.600 em | read from the font file |
 | Longest words | 16 letters (`incomprehensible`, `misunderstanding`, `multidimensional`, `disproportionate`) | `words.ts` |
 
-**Not measured yet** (task P1): Lighthouse scores, real frame rate and input latency, behaviour on a real phone, memory over a long run.
+**Units:** sizes in this section are KiB (1,024 bytes). Vite's build log uses kB (1,000 bytes), so its figures look ~2% larger.
+
+**Measured in R0** (real Chrome via a scratch Playwright harness; local server with brotli; throttled to 150 ms RTT, 1.6 Mbps, 4× CPU; 412 px viewport; 3 runs each, median):
+
+| Metric | Before R0 | After R0 |
+|---|---|---|
+| First / largest contentful paint (median) | 1,940 ms | **1,884 ms** |
+| …first, cold-DNS run | 2,324 ms | 1,840 ms |
+| Transfer on first load | 104.1 KiB | 104.4 KiB (same font bytes, now self-hosted) |
+| Third-party origins | 2 (Google Fonts) | **0** |
+| Console errors | 1 (favicon 404) | **0** |
+| CSP violations (production policy) | n/a | **0** |
+| React commits/s while playing, idle | 20 | 20 (unchanged; fixed in R1, P4) |
+| 16-letter word width vs space at 320 / 360 px | 325 px vs 276 / 316 px (**clipped**) | unchanged (fixed in R2, U15) |
+
+The font change gains between ~56 ms (warm DNS) and ~480 ms (cold connection to Google's domains). The clearer wins are zero third-party requests and a strict CSP. The harness lives outside the repo for now; it is the starting point for the R2.10 E2E test.
+
+**Still not measured:** Lighthouse on the Netlify URL, a real mid-range Android trace, input latency, memory over a long run.
 
 **What this means:**
 1. **ICA's own code is not the weight.** 94% of the JS is React. Shrinking app code is pointless.
@@ -170,15 +187,15 @@ LCP, CLS and INP use the published "good" Core Web Vitals thresholds. The rest a
 
 | Metric | Now | Budget / target | Checked by |
 |---|---|---|---|
-| JS (gzip) | 72.1 kB | ≤ 85 kB (lower it if P10 is adopted) | CI size script (P2) |
-| Fonts (woff2) | remote | ≤ 45 kB | CI size script |
-| First-load total (estimate) | ~102 kB after R0 | ≤ 120 kB | CI size script |
-| Third-party requests | 2 origins (Google) | 0; analytics is the only exception (small, async) | Network panel + CSP |
-| LCP, mobile throttled | not measured | ≤ 2.5 s | Lighthouse |
+| JS (gzip) | 72.4 KiB | ≤ 85 KiB (lower it if P10 is adopted) | `npm run size` (CI + Netlify build) |
+| Fonts (woff2) | 38.7 KiB (self-hosted) | ≤ 45 KiB | `npm run size` |
+| First-load total (gzip) | 113.3 KiB | ≤ 130 KiB (the plan said 120 from a brotli estimate; the check uses gzip, which is ~10% larger) | `npm run size` |
+| Third-party requests | 0 since R0 (was 2 Google origins) | 0; analytics is the only exception (small, async) | Network panel + CSP |
+| LCP, mobile throttled | 1.88 s median in a local Chrome lab run; Netlify not yet measured | ≤ 2.5 s | Lighthouse / harness |
 | CLS | not measured | ≤ 0.1 | Lighthouse |
 | Key → visual response | not measured | within one frame (~16 ms) in a lab trace; INP ≤ 200 ms | DevTools trace, dev HUD |
 | Lighthouse performance (mobile) | not measured | ≥ 90 | each release |
-| React renders/s while playing, not typing | 20 (from code) | ≈ 0–1 | dev HUD counter |
+| React renders/s while playing, not typing | 20 (measured) | ≈ 0–1 | dev HUD counter |
 | Long tasks during a run | not measured | none over 50 ms | dev HUD |
 | JS heap over a 10-minute run | not measured | flat | DevTools memory |
 
@@ -247,6 +264,23 @@ LCP, CLS and INP use the published "good" Core Web Vitals thresholds. The rest a
 | R0.11 | **Delivery checks** (P11) | Free speed | Verify gzip/brotli, immutable assets, no third-party requests | none |
 
 **Done when:** Netlify deploy fails if tests fail (proven with a deliberately failing test on a preview branch); headers verified in the browser; switching tabs mid-run pauses; favicon and preview card show; analytics shows a page view; fonts load from the site itself; baseline numbers are recorded in §4.1; CI fails when a budget is exceeded; no third-party font requests remain.
+
+### 5.1 R0 status (2026-11-06)
+
+| Task | Status | Evidence / note |
+|---|---|---|
+| R0.1 Audit Netlify setup | ⏳ **Needs owner** (D1) | Dashboard settings are not visible from the repo |
+| R0.2 `netlify.toml` | ✅ | Build: `npm test && npm run build && npm run size`. **Compare with the dashboard before merging.** |
+| R0.3 Headers | ✅ | Production CSP tested in Chrome: 0 violations, 0 console errors |
+| R0.4 Fonts | ✅ | Manrope (variable) + DM Mono 400, Latin, preloaded; OFL licences in `/fonts`; third-party origins 2 → 0 |
+| R0.5 Auto-pause | ✅ | Chrome: pauses on window blur and on a hidden tab; Esc resumes. **Scope note:** Esc/Enter resume and its on-screen hint were pulled forward from R2.3, because auto-pause makes them necessary for keyboard players. |
+| R0.6 Identity assets | ✅ | `favicon.svg` (fixes a 404), `apple-touch-icon.png`, `og-image.png` (1200×630, rendered from the game's fonts); `og:image` made absolute from Netlify's `URL` |
+| R0.7 Analytics | ⏳ **Needs owner** (D3) | When chosen, add its domain to the CSP |
+| R0.8 Size budgets | ✅ | `npm run size`: JS 72.4/85, fonts 38.7/45, first load 113.3/130 KiB |
+| R0.9 Baseline + HUD | ◐ Partly | Dev HUD (`?perf`, verified absent from production). Local Chrome lab baseline in §4.1. Still to do: Lighthouse on Netlify, real Android trace. |
+| R0.10 Monotonic clock | ✅ | `src/clock.ts` (`performance.now()`) |
+| R0.11 Delivery checks | ◐ | Headers configured; check `content-encoding` and cache headers on the live site after merge |
+| Extra: plain-text word lists | ✅ | Owner request (was part of R3): `src/game/wordlists/level-N.txt`, identical content, rules still test-enforced |
 
 ---
 

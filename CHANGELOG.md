@@ -3,9 +3,38 @@
 All notable changes to ICA are recorded here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.2.1] — 2026-11-06
+
+**R0 "Foundation"** from `docs/IMPROVEMENT-PLAN.md`. Gameplay rules are unchanged.
+
+### Added
+- **Auto-pause** when the tab is hidden or the window loses focus. It never auto-resumes; **Esc**, or **Enter** when no button has focus, resumes. The pause screen shows the hint.
+- **Favicon** (SVG), 180 px **touch icon** and a 1200×630 **link-preview card** (Open Graph / Twitter tags), rendered from the game's own fonts and colours. `og:image` is made absolute at build time from Netlify's `URL`.
+- **`netlify.toml`**: build runs tests, build and size budgets (a failure keeps the last good deploy live); immutable caching for `/assets/*` and `/fonts/*`; CSP and security headers.
+- **Size budgets** (`npm run size`, in KiB): JS ≤ 85, fonts ≤ 45, first load ≤ 130. Run in CI and in the Netlify build.
+- **Dev-only performance HUD** (`npm run dev`, open `/?perf`): FPS, React renders/s, worst frame, long tasks. Not included in production builds.
+
+### Changed
+- **Word lists are plain-text files** (`src/game/wordlists/level-1.txt` … `level-4.txt`, one word per line, `#` comments). Same words, same order; rules still enforced by tests.
+- **Fonts are self-hosted:** Manrope (variable) and DM Mono 400, Latin subset, preloaded; OFL licences in `/fonts`. No third-party requests remain.
+- Game timing uses a **monotonic clock** (`performance.now()`), so system clock changes can't drain survival.
+
+### Fixed
+- Switching tabs or apps for a few seconds could end a run.
+- Console 404 for the missing favicon.
+
+### Measured (real Chrome; 150 ms RTT, 1.6 Mbps, 4× CPU; median of 3)
+- First/largest contentful paint 1,940 → 1,884 ms (first cold-DNS run: 2,324 → 1,840 ms).
+- Third-party origins 2 → 0; console errors 1 → 0; CSP violations 0.
+- Transfer unchanged at ≈ 104 KiB (same font bytes, now self-hosted).
+- Unchanged, planned: 20 React renders/s while idle (R1) and 16-letter words clipped at 320/360 px (R2).
+
+### Not done (needs owner input)
+- R0.1 Netlify dashboard audit (compare with `netlify.toml` before merging).
+- R0.7 Analytics (tool not chosen).
 
 ### Docs
+- Improvement Plan: R0 status (§5.1) and measured baseline (§4.1); first-load budget corrected to 130 KiB gzip; font finding corrected (unused weights were never downloaded).
 - Added `docs/IMPROVEMENT-PLAN.md`: UX and engagement plan (releases R0–R6) with identity guardrails, UX gaps found in the code, Netlify operations, proposed `netlify.toml`, measurement approach, risk register and decisions. Plan only, nothing implemented.
 - Added a **Performance, Efficiency & Usability workstream** to the plan (§4): measured v0.2.0 baseline, budgets, efficiency tasks P1–P11 and usability tasks. Measured: JS 72.1 kB gzip (React is 67.5 kB of it), ≈ 39 kB of fonts if self-hosted, 20 React renders/s by code. Found: 16-letter words overflow 320/360 px screens (computed from the font's metrics) and untyped letters have 2.67:1 contrast.
 - Hosting documented as **Netlify** (earlier drafts said Cloudflare Pages); Phase 2B items re-sequenced into the plan; roadmap rewritten to match.

@@ -57,27 +57,33 @@
 
 ```
 ICA/
-├── .github/workflows/ci.yml   # CI: npm ci → npm test → npm run build
+├── .github/workflows/ci.yml   # CI: npm ci → npm test → npm run build → npm run size
 ├── .gitignore                 # node_modules, dist, zips, env files
 ├── .nvmrc                     # Node 22 (used by CI and hosting)
 ├── CHANGELOG.md               # Version history
 ├── README.md
-├── docs/ICA-Project-Guide.md  # This document
-├── index.html                 # HTML shell → /src/main.tsx
-├── package.json               # Scripts: dev, build, preview, test
-├── vite.config.ts             # React plugin + __APP_VERSION__ injection
+├── docs/                      # This guide, IMPROVEMENT-PLAN.md, ROADMAP.md
+├── index.html                 # HTML shell → /src/main.tsx; font preloads, favicon, link-preview tags
+├── netlify.toml               # Netlify build (tests + size gate) and headers (cache, CSP)
+├── package.json               # Scripts: dev, build, preview, test, size
+├── public/                    # Copied as-is: fonts/ (+ OFL licences), favicon, touch icon, og-image
+├── scripts/check-size.mjs     # Size budgets (KiB), run by CI and Netlify
+├── vite.config.ts             # React plugin, __APP_VERSION__, %SITE_URL% for link previews
 ├── tsconfig*.json             # TypeScript configs (app + node)
 └── src/
     ├── main.tsx               # Mounts <App/>
-    ├── App.tsx                # Wiring: state ↔ effects ↔ screens
+    ├── App.tsx                # Wiring: state ↔ effects ↔ screens; auto-pause; keyboard
+    ├── clock.ts               # Monotonic game clock (performance.now)
     ├── storage.ts             # Safe localStorage read/write
+    ├── dev/PerfHud.tsx        # Dev-only perf overlay (?perf); never in production builds
     ├── styles.css             # All styles
     ├── vite-env.d.ts          # Type for __APP_VERSION__
     ├── game/                  # PURE LOGIC — no React, no browser APIs
     │   ├── engine.ts          # Rules: state, events, reducer, timers
     │   ├── engine.test.ts
-    │   ├── words.ts           # Word pools, getWord, getDifficulty
-    │   └── words.test.ts
+    │   ├── words.ts           # Loads word lists, getWord, getDifficulty
+    │   ├── words.test.ts      # Enforces word-list rules
+    │   └── wordlists/         # level-1.txt … level-4.txt: one word per line
     ├── hooks/                 # SIDE EFFECTS
     │   ├── useInterval.ts     # Game clock tick
     │   └── useSound.ts        # Web Audio tones
@@ -108,11 +114,15 @@ ICA/
 |---|---|---|
 | Install | `npm install` | Node 22 |
 | Dev server | `npm run dev` | http://localhost:5173 |
-| Unit tests | `npm test` | 30 tests, runs in seconds |
+| Unit tests | `npm test` | 31 tests, runs in seconds |
 | Production build | `npm run build` | Type-checks (including tests), then outputs `dist/` |
+| Size budgets | `npm run size` | After a build; fails if over budget (KiB) |
+| Perf overlay | `npm run dev`, open `/?perf` | FPS, renders/s, worst frame, long tasks (dev only) |
 | Preview build | `npm run preview` | Serves `dist/` locally |
 
-**Status:** ✅ build passes · ✅ 30/30 tests pass · ✅ CI configured.
+**Status:** ✅ build passes · ✅ 31/31 tests pass · ✅ size budgets pass · ✅ CI configured.
+
+**Adding words:** edit `src/game/wordlists/level-N.txt` (one word per line, `#` for comments) and run `npm test`. The tests reject anything outside a–z, the wrong length for the level, or duplicates.
 
 ---
 
@@ -515,12 +525,12 @@ ICA is deployed on **Netlify**. The dashboard settings (build command, publish d
 | Instant rollback | Publish an earlier deploy if a release misbehaves |
 | Custom domain + automatic HTTPS | Launch (R5) |
 
-### 10.3 Configuration (planned)
+### 10.3 Configuration (`netlify.toml`, added in R0)
 
-Build settings, test gating, cache and security headers move into a versioned `netlify.toml`. The proposed file, ordering constraints (audit first, fonts self-hosted before CSP) and rollout are in [`IMPROVEMENT-PLAN.md` §12](./IMPROVEMENT-PLAN.md). **Not applied yet.**
+`netlify.toml` versions the build (`npm test && npm run build && npm run size`, Node 22) and headers (immutable caching for `/assets/*` and `/fonts/*`, CSP, `nosniff`, referrer and permissions policies). It **overrides the dashboard's build settings**, so compare the two before merging (task R0.1). Background and rollout: [`IMPROVEMENT-PLAN.md` §12](./IMPROVEMENT-PLAN.md).
 
 ### 10.4 CI (in place)
-`.github/workflows/ci.yml` runs `npm ci → npm test → npm run build` on every push to `main` and every PR. Turn on GitHub branch protection for `main` and require this check.
+`.github/workflows/ci.yml` runs `npm ci → npm test → npm run build → npm run size` on every push to `main` and every PR. Turn on GitHub branch protection for `main` and require this check.
 
 ### 10.5 Pre-Launch Checklist
 - [x] Build passes locally and in CI

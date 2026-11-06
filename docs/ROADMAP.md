@@ -21,7 +21,7 @@
 | Release | Version | Theme | Effort | Status |
 |---|---|---|---|---|
 | Phase 0 + 1 | 0.2.0 | Working build, clean architecture, 30 tests, CI | done | ✅ Merged (PR #1), live on Netlify |
-| **R0** | 0.2.1 | Netlify hardening, right-sized fonts, auto-pause, identity assets, measurement, size budgets | ~2 days | ▶ **Next** |
+| **R0** | 0.2.1 | Netlify hardening, right-sized fonts, auto-pause, identity assets, measurement, size budgets | ~2 days | ✅ On branch `r0-foundation` (R0.1, R0.7 need input) |
 | **R1** | 0.3.0 | Render pipeline first, then typing impact: weighty keystrokes (guide §9 · Phase 2A) | ~6.5 days | Planned |
 | **R2** | 0.4.0 | Result screen, instant replay, readability, balance, mobile, small-screen fit | ~5.5 days | Planned |
 | **R3** | 0.5.0 | Bigger vocabulary, tone decision, calm-mode gate | ~3 days | Planned |
@@ -39,7 +39,7 @@
 |---|---|
 | Build / tests / CI | ✅ passes · 30 unit tests · GitHub Actions on every push/PR |
 | Architecture | ✅ Pure engine (`src/game/`), hooks, screen components |
-| Hosting | ✅ Netlify (settings not yet in the repo: no `netlify.toml`) |
+| Hosting | ✅ Netlify; `netlify.toml` added in R0 (not merged yet) |
 | Size | JS 72.1 kB gzip, of which React is 67.5 kB; ICA's own code ≈ 4.6 kB |
 | Not yet known | ❓ Runtime performance (Lighthouse, frame rate), real-phone behaviour, Safari/Firefox, Netlify dashboard settings |
 
