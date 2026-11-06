@@ -29,6 +29,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 - Human playtest and tuning of `src/feel/config.ts` (Phase 2A step 7); real-device check (iOS sound, Android haptics).
 - Proposed add-ons A1–A6 are listed for discussion in `docs/IMPROVEMENT-PLAN.md` §6.3 (none built).
 
+### Docs
+- Guide: new **Feedback Layer** section (§5.12): how the feedback flows, the settings, the rules for adding or changing an effect, and the tuning workflow.
+- Guide brought up to date with R0/R1: overview, tech stack (self-hosted fonts, synthesised audio, Netlify), architecture diagram, layer rules, styling notes, test counts, issue statuses.
+- Plan: gaps fixed in R0/R1 marked (§2.2). Roadmap: status and "where we are" updated to v0.3.0.
+
 ## [0.2.1] — 2026-11-06
 
 **R0 "Foundation"** from `docs/IMPROVEMENT-PLAN.md`. Gameplay rules are unchanged.

@@ -78,18 +78,18 @@ ICA is **a quiet, endless typing arcade**: one word at a time, monochrome, no ba
 
 | # | Gap | Evidence | Effect on the player |
 |---|---|---|---|
-| U1 | **Switching tabs loses the run** | No `visibilitychange`/`blur` handling; the clock is `Date.now()`-based | A 6-second glance at another tab can end the game |
+| U1 | **Switching tabs loses the run** (fixed in R0) | No `visibilitychange`/`blur` handling; the clock is `Date.now()`-based | A 6-second glance at another tab can end the game |
 | U2 | **Low-contrast text** | Measured on `#090909`: untyped letters `#555` = **2.67:1**; small labels `#484848` / `#555` / `#656565` / `#666` = 2.2–3.5:1 (WCAG needs 3:1 for large text, 4.5:1 for small) | The upcoming letters, the thing you read most, are hard to see; labels are 8–11 px |
 | U3 | **Game-over shows one number** | `GameOverScreen.tsx`: only "words completed" | No sense of progress or near-miss |
 | U4 | **Replay takes two steps** | Play again → ready screen → press a key | Friction between runs |
-| U5 | **Pause can't be undone by keyboard** | Esc pauses but only the RESUME button resumes | Breaks the keyboard flow |
-| U6 | **The combo window is invisible** | `engine.comboTimer` exists but the UI doesn't show it | Combos feel random: it just resets |
+| U5 | **Pause can't be undone by keyboard** (fixed in R0) | Esc pauses but only the RESUME button resumes | Breaks the keyboard flow |
+| U6 | **The combo window is invisible** (fixed in R1) | `engine.comboTimer` exists but the UI doesn't show it | Combos feel random: it just resets |
 | U7 | **Rules are never explained** | Ready screen: title + "press any key" | New players don't know mistakes cost time |
 | U8 | **Flat 5 s refill** | `MAX_HEALTH` for every word length | A 4-letter word is easy; a 16-letter word needs ~40 WPM with no errors |
 | U9 | **Small word pools** | 47 / 49 / 48 / **31** words per level; level 4 is endless | Repeats become obvious within minutes |
 | U10 | **Mobile keyboard unverified** | Hidden input with `pointer-events: none` | May not open on iOS Safari |
-| U11 | **No identity assets** | No favicon, preview image or manifest in `index.html` | Weak first impression, bare link previews |
-| U12 | **Remote fonts** | `@import` from Google Fonts | Render-blocking; visitor IPs go to Google |
+| U11 | **No identity assets** (fixed in R0) | No favicon, preview image or manifest in `index.html` | Weak first impression, bare link previews |
+| U12 | **Remote fonts** (fixed in R0) | `@import` from Google Fonts | Render-blocking; visitor IPs go to Google |
 | U13 | **Tone mismatch (to decide)** | Level 1 mixes calm words (`drift`, `hush`) with slang (`rizz`, `yeet`, `simp`) | Slang may clash with the "quiet" feel. A brand decision, not a bug. |
 | U14 | **Footer vs mechanic (to decide)** | Footer says "TYPE AT YOUR OWN PACE"; the survival meter sets the pace | Possible mismatch, which an optional calm mode would resolve (§8.3) |
 | U15 | **Long words clipped on narrow phones** | Computed: a 16-letter word is 325 px wide; 276 px is available at a 320 px screen and 316 px at 360 px; `overflow: hidden` cuts the end (§4.4) | Level-4 words can be unreadable on small phones |
@@ -97,7 +97,7 @@ ICA is **a quiet, endless typing arcade**: one word at a time, monochrome, no ba
 | U17 | **Zoom, orientation and shortcut hints not audited** | No test yet at 200% zoom or on a landscape phone; Esc is hinted only during play | Unknown problems for some players |
 | E1 | **React re-renders 20×/s** (fixed in R1: 1/s) | `useInterval(tick, 50)` creates new state every tick; only the meter, SURVIVAL (10/s) and TIME (1/s) change visibly | Wasted CPU and battery; less headroom for effects |
 | E2 | **Meter animates `width`** (fixed in R1) | `transition: width .06s linear` | Layout and paint every frame |
-| E3 | **Wall-clock time** | `Date.now()` in every dispatch | A system clock change can jump survival |
+| E3 | **Wall-clock time** (fixed in R0) | `Date.now()` in every dispatch | A system clock change can jump survival |
 | E4 | **Fonts remote** (fixed in R0) | Two Google origins plus a render-blocking CSS hop. Unused weights were requested, but browsers download only the faces used, so no bytes were wasted. | ~38% of first load once self-hosted; third-party dependency |
 
 ---

@@ -32,8 +32,9 @@
 | **Pressure** | A 5-second **survival meter** drains constantly. Completing a word refills it; each wrong key removes 0.75 s. At zero, the game ends. |
 | **Reward** | A **combo** grows when words are completed within 3 s of each other. The best combo is saved. |
 | **Progression** | Words get longer at 12, 30 and 60 completed words (levels 1–4). |
+| **Feel** | Synthesised key sounds, small letter and word motion, a heartbeat when survival runs low; `SOUND` and `FX` controls (since v0.3.0). |
 | **Backend** | None. A fully static, client-side site. |
-| **Saved data** | Best combo and sound preference in browser `localStorage`. |
+| **Saved data** | Best combo, sound level and visual-effects level in browser `localStorage`. |
 
 ---
 
@@ -44,11 +45,12 @@
 | UI | React | ^19.0.0 | Components, hooks, `useReducer` |
 | Language | TypeScript | ~5.7.2 | Strict typing |
 | Build / dev server | Vite | ^6.0.5 | Dev server, production bundle |
-| Tests | Vitest | ^3.2.7 | Unit tests for game rules |
+| Tests | Vitest | ^3.2.7 | Unit tests: engine, word lists, feel rules, storage |
 | CI | GitHub Actions | — | Tests + build on every push/PR |
 | Styling | Plain CSS | — | One stylesheet, dark theme |
-| Fonts | Google Fonts (Manrope, DM Mono) | — | Loaded remotely |
-| Audio | Web Audio API | Browser | Generated tones, no audio files |
+| Fonts | Manrope (variable) + DM Mono 400 | v5.3.0 files | Self-hosted in `public/fonts/`, Latin subset, preloaded; SIL OFL |
+| Audio | Web Audio API | Browser | Synthesised feedback sounds (`src/feel/audio.ts`), no audio files |
+| Hosting | Netlify | — | Static hosting, deploy previews; configured by `netlify.toml` |
 | Runtime | Node.js | 22 (`.nvmrc`) | Build and test only |
 
 ---
@@ -107,7 +109,8 @@ ICA/
 |---|---|---|
 | `game/` | Plain TypeScript | React, `window`, `Date.now()`, `Math.random()`, `localStorage` |
 | `hooks/`, `storage.ts` | Browser APIs | Game rules |
-| `components/` | Props | Game rules, browser APIs |
+| `feel/` | Web Audio, Web Animations, vibration; reads engine state | Game rules; `transform`/`opacity` animations while typing (§5.12) |
+| `components/` | Props; DOM refs for display-only updates (PlayScreen's display tick) | Game rules |
 | `App.tsx` | Everything, to connect layers | New game rules (put them in the engine) |
 
 > Keeping `game/` free of browser APIs is what makes it testable. Time (`now`) and randomness (`seed`) are passed **in** as event data.
@@ -120,13 +123,13 @@ ICA/
 |---|---|---|
 | Install | `npm install` | Node 22 |
 | Dev server | `npm run dev` | http://localhost:5173 |
-| Unit tests | `npm test` | 31 tests, runs in seconds |
+| Unit tests | `npm test` | 57 tests, runs in seconds |
 | Production build | `npm run build` | Type-checks (including tests), then outputs `dist/` |
 | Size budgets | `npm run size` | After a build; fails if over budget (KiB) |
 | Perf overlay | `npm run dev`, open `/?perf` | FPS, renders/s, worst frame, long tasks (dev only) |
 | Preview build | `npm run preview` | Serves `dist/` locally |
 
-**Status:** ✅ build passes · ✅ 31/31 tests pass · ✅ size budgets pass · ✅ CI configured.
+**Status:** ✅ build passes · ✅ 57/57 tests pass · ✅ size budgets pass · ✅ CI configured.
 
 **Adding words:** edit `src/game/wordlists/level-N.txt` (one word per line, `#` for comments) and run `npm test`. The tests reject anything outside a–z, the wrong length for the level, or duplicates.
 
@@ -139,22 +142,20 @@ ICA/
 ICA follows a **"pure core, thin shell"** design:
 
 ```
-          ┌────────────────────────── App.tsx (shell) ──────────────────────────┐
- keyboard │                                                                     │
- & clicks ──▶ dispatch(event{ now, seed? }) ──▶ gameReducer (pure engine) ──▶ new state
-          │                                                                │     │
- 50ms tick ──▶ dispatch({type:'tick', now})                               ▼     │
-          │                                         ┌─────────── renders screens ┤
-          │                                         │                            │
-          │      effects react to state changes: ◀──┘                            │
-          │        • feedbackId → sound + shake                                  │
-          │        • bestCombo / sound toggle → localStorage                     │
-          └─────────────────────────────────────────────────────────────────────┘
+ keyboard & clicks ─▶ dispatch(event{ now, seed? }) ─┐
+ deadline timer    ─▶ dispatch({ type: 'tick', now })├─▶ gameReducer (pure engine) ─▶ new state
+   (nextDeadline + 1 s safety tick)                  ┘                                  │
+                                                                                         ▼
+ App.tsx (shell)
+   ├─ renders screens (components/)        React renders only on events (~1/s while idle)
+   ├─ useFeel: sound · motion · haptics    once per feedback event, before paint
+   ├─ PlayScreen display tick (20 Hz)      meter, SURVIVAL, TIME, combo fade, danger pulse
+   └─ storage.ts                           best combo, SOUND and FX levels
 ```
 
 1. **Engine (`game/engine.ts`):** decides *what happens*. Pure function: `(state, event) → state`.
-2. **Shell (`App.tsx` + hooks):** connects the engine to the browser (clock, keyboard, sound, storage).
-3. **Screens (`components/`):** draw the state. No logic.
+2. **Shell (`App.tsx`, `hooks/`, `feel/`):** connects the engine to the browser: clock, keyboard, sound, motion, storage.
+3. **Screens (`components/`):** draw the state, with no game rules. `PlayScreen` also owns the display tick for time-driven readouts.
 
 ### 5.2 Screen State Machine
 
@@ -273,7 +274,46 @@ Levels: OFF / LOW / MED / HIGH (master gain 0 / 0.35 / 0.6 / 0.9); at most 6 voi
 
 ### 5.11 UI & Styling
 
-Dark monochrome theme (`#090909` / `#ededed`), Manrope + DM Mono, a 2 px `survival-track` meter, `breathe` and `shake` animations, mobile breakpoint at 600 px. Keystrokes go through a hidden `.typing-input`.
+Dark monochrome theme (`#090909` / `#ededed`), Manrope + DM Mono (self-hosted), a 2 px `survival-track` meter, mobile breakpoint at 600 px. Keystrokes go through a hidden `.typing-input`. The only standing animation is the ready screen's `breathe` prompt. All feedback styling is scoped by `data-effects` on `.app-shell` (§5.12).
+
+### 5.12 Feedback Layer (since v0.3.0)
+
+How the typing impact works, and the rules for changing it. Background and measurements: §9 · Phase 2A and [`IMPROVEMENT-PLAN.md` §6.1–6.2](./IMPROVEMENT-PLAN.md).
+
+**Flow**
+
+```
+ keystroke ─▶ engine sets feedback + feedbackId (or comboBreakId) ─▶ React render
+                                  └─▶ useFeel (layout effect: before paint, once per id)
+                                        ├─ sound    feel/audio.ts     thock · thud · chunk · chime · crack
+                                        ├─ motion   Web Animations    top / left / colour on small elements
+                                        └─ haptics  feel/haptics.ts   touch devices only
+ time ──────▶ PlayScreen display tick (20 Hz) ─▶ meter · SURVIVAL · TIME · combo fade · danger pulse
+              useFeel heartbeat (fixed 600 ms phase) while survival < 1.5 s
+```
+
+**Settings**
+
+| Control | Levels | Default | Effect |
+|---|---|---|---|
+| `SOUND` | OFF · LOW · MED · HIGH | OFF (decision D2 open) | Master volume. OFF creates no audio context at all. |
+| `FX` | FULL · SUBTLE · OFF | FULL, or SUBTLE when the OS asks for reduced motion | FULL: all effects. SUBTLE: no movement; colour cues stay. OFF: no visual effects, no haptics. |
+| Performance guard | — | On | 6 frames in a row > 50 ms while FULL → SUBTLE for the session. An explicit `FX` choice wins. |
+
+**Rules for adding or changing an effect** (each measured or decided in R1)
+
+| # | Rule | Why |
+|---|---|---|
+| 1 | Trigger from `useFeel`, keyed on an event id (`feedbackId`, `comboBreakId`). Never per render, never in the engine. | One response per event; nothing replays after pause/resume |
+| 2 | Animate colour or `top`/`left` on a small positioned element, **not** `transform`/`opacity` | While compositor animations ran, keystroke updates arrived about a frame late (measured) |
+| 3 | Per-key motion only when `intensity ≥ FEEL.cadence.motionFrom` (≈ 115 ms between keys) | In fast bursts it overlaps the next key and delays it; sound carries the feel there |
+| 4 | Movement ≤ 3 px, only in the word area. SUBTLE = no movement; OFF = nothing visual. In CSS, scope with `[data-effects="…"]`. | Guardrails: motion sickness, readability |
+| 5 | Time-driven visuals belong in PlayScreen's display tick, keyed on *when things end*; not in React state or a per-frame loop | Measured: a per-frame loop made every frame heavier; React state meant 20 renders/s |
+| 6 | Big (tier-3) effects go through `EffectBudget`; sounds through the voice pool | No stacking, no clipping |
+| 7 | Every number goes in `src/feel/config.ts`; pure logic in `feel/rules.ts`, with a test | Tuning never touches logic |
+| 8 | Before merging, compare keystroke latency with FX OFF vs FULL during fast typing (Event Timing). FULL must stay within one 8 ms step at the median. | "Latency over richness" |
+
+**Tuning workflow:** run `npm run dev`, open `/?perf`, choose `SOUND` and `FX`, play, and edit `src/feel/config.ts` (it hot-reloads). The overlay should show about 1 render/s while idle and no long tasks. Final tuning needs human playtesting (Phase 2A step 7).
 
 ---
 
@@ -311,14 +351,16 @@ Feedback tuning (timings, pitches, caps, thresholds) lives in `src/feel/config.t
 | 1 | 🔴 | Build failed (`TS6133` unused `comboRemaining`) | ✅ Fixed (Phase 0) |
 | 2 | 🔴 | No `.gitignore`; 17 MB `ICA.zip` in git history | ✅ `.gitignore` added · ⏸ history purge deferred (needs force-push; optional) |
 | 3 | 🟠 | Pause counted paused time; combo lost on resume | ✅ Fixed (Phase 0), redesigned out (Phase 1), regression test |
-| 4 | 🟠 | Mobile keyboard may not open (hidden input) | ⏳ Phase 2 |
-| 5 | 🟡 | Flat 5 s refill makes level 4 very hard | ⏳ Phase 2 (balance decision) |
+| 4 | 🟠 | Mobile keyboard may not open (hidden input) | ⏳ R2 (R2.8) |
+| 5 | 🟡 | Flat 5 s refill makes level 4 very hard | ⏳ R2 (R2.7) |
 | 6 | 🟡 | Duplicate word; lengths not progressive | ✅ Fixed (Phase 0), enforced by tests |
-| 7 | 🟡 | Sparse game-over screen; non-letter keys played tick | ✅ Tick fixed (Phase 1) · ⏳ game-over summary in Phase 2 |
-| 8 | 🟡 | Remote Google Fonts (render-blocking, privacy) | ⏳ Phase 2 |
+| 7 | 🟡 | Sparse game-over screen; non-letter keys played tick | ✅ Tick fixed (Phase 1) · ⏳ result screen in R2 (R2.1) |
+| 8 | 🟡 | Remote Google Fonts (render-blocking, privacy) | ✅ Fixed in R0 (self-hosted) |
 | 9 | ⚪ | Monolithic component, no tests, hard-coded version, misleading CSS names | ✅ Fixed (Phase 1) |
 | 10 | 🟠 | *New:* Enter/Space on a focused button restarted the game right after starting | ✅ Fixed (Phase 1) |
 | 11 | 🟠 | *New:* `localStorage` errors could crash the app on load | ✅ Fixed (Phase 1) |
+
+Findings since then (U1–U17, E1–E4) and their status are tracked in [`IMPROVEMENT-PLAN.md` §2.2](./IMPROVEMENT-PLAN.md).
 
 ---
 
@@ -381,7 +423,7 @@ All logic lived in one 340-line component. That made two bugs easy to introduce 
 | Item | Reason |
 |---|---|
 | Playwright end-to-end test | Adds a browser toolchain; engine tests cover the rules. Revisit with Phase 2 UI changes. |
-| `requestAnimationFrame` loop | 50 ms ticks are adequate; the change has no visible benefit yet |
+| `requestAnimationFrame` loop | 50 ms ticks are adequate; the change has no visible benefit yet. *(Superseded in R1: deadline-scheduled ticks plus a 20 Hz display tick; a per-frame loop was measured and rejected.)* |
 | ESLint | Not needed for correctness now; TypeScript strict mode and tests cover the main risks |
 
 #### Manual verification still recommended

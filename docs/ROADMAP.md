@@ -9,13 +9,12 @@
 ## 1. At a Glance
 
 ```
- DONE                    NEXT                    THEN                     LATER                 OPTIONAL
- ──────────────────      ───────────────────     ───────────────────      ──────────────────    ─────────────────
- Phase 0 ✅              R0 v0.2.1               R1 v0.3.0                R3 v0.5.0             R6 Online
- Phase 1 ✅              Foundation              Typing Impact            Content & Variety     (leaderboard,
- v0.2.0 live ✅          (Netlify, safety,       R2 v0.4.0                R4 v0.6.0             only on demand)
-                         measurement)            Run Experience           Return Loops
-                                                                          R5 v1.0.0 Launch
+ DONE                              NEXT              THEN                  LATER              OPTIONAL
+ ────────────────────────────────  ────────────────  ────────────────────  ─────────────────  ──────────────
+ Phase 0 + 1 · v0.2.0 ✅ (live)     R2 · v0.4.0       R3 · v0.5.0           R5 · v1.0.0        R6 · Online
+ R0 Foundation · v0.2.1 ✅          Run Experience    Content & Variety     Launch             (on demand)
+ R1 Typing Impact · v0.3.0 ✅                          R4 · v0.6.0
+ (R0 and R1 on branches, not merged)                  Return Loops
 ```
 
 | Release | Version | Theme | Effort | Status |
@@ -23,7 +22,7 @@
 | Phase 0 + 1 | 0.2.0 | Working build, clean architecture, 30 tests, CI | done | ✅ Merged (PR #1), live on Netlify |
 | **R0** | 0.2.1 | Netlify hardening, right-sized fonts, auto-pause, identity assets, measurement, size budgets | ~2 days | ✅ On branch `r0-foundation` (R0.1, R0.7 need input) |
 | **R1** | 0.3.0 | Render pipeline first, then typing impact: weighty keystrokes (guide §9 · Phase 2A) | ~6.5 days | ✅ On branch `r1-typing-impact` (playtest/tuning and D2 open) |
-| **R2** | 0.4.0 | Result screen, instant replay, readability, balance, mobile, small-screen fit | ~5.5 days | Planned |
+| **R2** | 0.4.0 | Result screen, instant replay, readability, balance, mobile, small-screen fit | ~5.5 days | ▶ Next |
 | **R3** | 0.5.0 | Bigger vocabulary, tone decision, calm-mode gate | ~3 days | Planned |
 | **R4** | 0.6.0 | Daily run, share, local stats (optional) | ~4 days | Planned |
 | **R5** | 1.0.0 | Custom domain, audits, launch | ~2.5 days | Planned |
@@ -33,15 +32,16 @@
 
 ---
 
-## 2. Where We Are (v0.2.0)
+## 2. Where We Are (v0.3.0, on branches)
 
 | Area | State |
 |---|---|
-| Build / tests / CI | ✅ passes · 30 unit tests · GitHub Actions on every push/PR |
-| Architecture | ✅ Pure engine (`src/game/`), hooks, screen components |
-| Hosting | ✅ Netlify; `netlify.toml` added in R0 (not merged yet) |
-| Size | JS 72.1 kB gzip, of which React is 67.5 kB; ICA's own code ≈ 4.6 kB |
-| Not yet known | ❓ Runtime performance (Lighthouse, frame rate), real-phone behaviour, Safari/Firefox, Netlify dashboard settings |
+| Live on Netlify | v0.2.0 from `main`. v0.2.1 and v0.3.0 are on stacked branches (`r0-foundation` → `r1-typing-impact`), not merged yet. |
+| Build / tests / CI | ✅ Passes · 57 unit tests · size budgets · GitHub Actions on every push/PR |
+| Architecture | ✅ Pure engine (`src/game/`), feel layer (`src/feel/`), hooks, screen components |
+| Performance (lab) | Idle React renders 1/s (was 20); keystroke latency with FX OFF equals v0.2.1 |
+| Size | JS 75.8 KiB gzip (budget 85) · fonts 38.7 KiB (45) · first load 116.9 KiB (130) |
+| Not yet known | ❓ Real phones (sound on iOS, haptics on Android), Lighthouse on Netlify, Netlify dashboard settings, playtest feedback |
 
 ---
 
