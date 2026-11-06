@@ -2,6 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { createInitialState, gameReducer } from './game/engine'
 import { useInterval } from './hooks/useInterval'
 import { useSound } from './hooks/useSound'
+import { now } from './clock'
 import { BEST_COMBO_KEY, SOUND_KEY, readBoolean, readNumber, writeValue } from './storage'
 import { ReadyScreen } from './components/ReadyScreen'
 import { PlayScreen } from './components/PlayScreen'
@@ -24,11 +25,11 @@ function App() {
   const playSound = useSound(soundEnabled)
   const { screen, feedback, feedbackId, combo, bestCombo } = state
 
-  const start = useCallback(() => dispatch({ type: 'start', now: Date.now(), seed: randomSeed() }), [])
-  const pause = useCallback(() => dispatch({ type: 'pause', now: Date.now() }), [])
-  const resume = useCallback(() => dispatch({ type: 'resume', now: Date.now() }), [])
+  const start = useCallback(() => dispatch({ type: 'start', now: now(), seed: randomSeed() }), [])
+  const pause = useCallback(() => dispatch({ type: 'pause', now: now() }), [])
+  const resume = useCallback(() => dispatch({ type: 'resume', now: now() }), [])
   const restart = useCallback(() => dispatch({ type: 'restart' }), [])
-  const tick = useCallback(() => dispatch({ type: 'tick', now: Date.now() }), [])
+  const tick = useCallback(() => dispatch({ type: 'tick', now: now() }), [])
 
   useInterval(tick, screen === 'playing' ? TICK_MS : null)
 
@@ -56,9 +57,25 @@ function App() {
     if (screen === 'playing') inputRef.current?.focus()
   }, [screen])
 
-  // Keyboard: any key starts from the ready screen; Esc pauses during play.
+  // Auto-pause when the player looks away (tab hidden or window loses focus).
+  // Never auto-resume: the player decides when to continue.
   useEffect(() => {
-    if (screen !== 'ready' && screen !== 'playing') return
+    if (screen !== 'playing') return
+    const handleVisibility = () => {
+      if (document.hidden) pause()
+    }
+    window.addEventListener('blur', pause)
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      window.removeEventListener('blur', pause)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [screen, pause])
+
+  // Keyboard: any key starts from the ready screen; Esc pauses during play;
+  // Esc (or Enter, unless a button has focus) resumes from the pause screen.
+  useEffect(() => {
+    if (screen === 'gameover') return
     const handleKeyDown = (event: KeyboardEvent) => {
       if (IGNORED_KEYS.has(event.key)) return
       if (screen === 'ready') {
@@ -66,12 +83,20 @@ function App() {
         event.preventDefault()
         return start()
       }
+      if (screen === 'paused') {
+        const onButton = event.target instanceof HTMLButtonElement
+        if (event.key === 'Escape' || (event.key === 'Enter' && !onButton)) {
+          event.preventDefault()
+          resume()
+        }
+        return
+      }
       if (event.key === 'Escape') return pause()
       if (event.key.length === 1) inputRef.current?.focus()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [screen, start, pause])
+  }, [screen, start, pause, resume])
 
   return (
     <main className="app-shell" onMouseDown={() => screen === 'playing' && inputRef.current?.focus()}>
@@ -91,7 +116,7 @@ function App() {
           state={state}
           shaking={shaking}
           inputRef={inputRef}
-          onInput={(value) => dispatch({ type: 'input', value, now: Date.now() })}
+          onInput={(value) => dispatch({ type: 'input', value, now: now() })}
         />
       )}
       {screen === 'paused' && (
