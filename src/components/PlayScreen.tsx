@@ -37,7 +37,7 @@ export function PlayScreen({ state, inputRef, feelRefs, pulse, onInput }: PlaySc
 
   // Time-driven readouts (meter, SURVIVAL, TIME, combo fade, danger) are written straight to the
   // DOM by one light 20 Hz display tick, so React re-renders only on real events.
-  // Measured choices (docs/IMPROVEMENT-PLAN.md §6.1):
+  // Measured choices (docs/IMPROVEMENT-PLAN.md §6.1–6.2):
   //   - not a per-frame loop: 60 writes/s made every frame heavier;
   //   - not continuous compositor animations: while they run, Chrome favours them over the main
   //     thread and keystroke updates land a frame later (+~25 ms at 4x CPU).

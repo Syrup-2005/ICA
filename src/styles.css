@@ -71,7 +71,7 @@ h1 { font-size: clamp(36px, 6vw, 72px); line-height: 1.08; letter-spacing: -.075
 .pause-actions { gap: 25px; margin-top: 55px; }
 .primary-button { background: #eee; color: #111; border: 1px solid #eee; padding: 13px 22px; font: 10px 'DM Mono', monospace; letter-spacing: .1em; cursor: pointer; }
 
-/* ---- Feedback effects (guide §9 · Phase 2A; measured design in docs/IMPROVEMENT-PLAN.md §6.1) ----
+/* ---- Feedback effects (guide §9 · Phase 2A; measured design in docs/IMPROVEMENT-PLAN.md §6.1–6.2) ----
    data-effects on .app-shell: full = everything; subtle = no movement (colour cues stay); off = none.
    Movement is capped at 3 px and only the word area moves.
    Effects animate colour and top/left on small positioned elements, NOT transform/opacity:

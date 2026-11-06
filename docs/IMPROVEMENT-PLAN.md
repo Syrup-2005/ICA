@@ -2,7 +2,7 @@
 
 > **Baseline:** v0.2.0, live on Netlify · **Scope:** improvements, polish and engagement features after Phase 1
 > **Companions:** [`ROADMAP.md`](./ROADMAP.md) (overview) · [`ICA-Project-Guide.md`](./ICA-Project-Guide.md) (architecture, Phase 2A detail) · [`../CHANGELOG.md`](../CHANGELOG.md)
-> **Last updated:** 2026-11-06 · **Status:** R0 implemented on branch `r0-foundation` except R0.1 and R0.7, which need owner input (§5.1). R1 onward is plan only.
+> **Last updated:** 2026-11-06 · **Status:** R0 (v0.2.1) and R1 (v0.3.0) implemented on branches `r0-foundation` and `r1-typing-impact`. Open owner items: R0.1, R0.7, D2 (§5.1, §6.1). R2 onward is plan only.
 
 ---
 
@@ -95,8 +95,8 @@ ICA is **a quiet, endless typing arcade**: one word at a time, monochrome, no ba
 | U15 | **Long words clipped on narrow phones** | Computed: a 16-letter word is 325 px wide; 276 px is available at a 320 px screen and 316 px at 360 px; `overflow: hidden` cuts the end (§4.4) | Level-4 words can be unreadable on small phones |
 | U16 | **Small touch targets** | Top-bar buttons ≈ 30 px tall | Easy to miss on a phone |
 | U17 | **Zoom, orientation and shortcut hints not audited** | No test yet at 200% zoom or on a landscape phone; Esc is hinted only during play | Unknown problems for some players |
-| E1 | **React re-renders 20×/s** | `useInterval(tick, 50)` creates new state every tick; only the meter, SURVIVAL (10/s) and TIME (1/s) change visibly | Wasted CPU and battery; less headroom for effects |
-| E2 | **Meter animates `width`** | `transition: width .06s linear` | Layout and paint every frame |
+| E1 | **React re-renders 20×/s** (fixed in R1: 1/s) | `useInterval(tick, 50)` creates new state every tick; only the meter, SURVIVAL (10/s) and TIME (1/s) change visibly | Wasted CPU and battery; less headroom for effects |
+| E2 | **Meter animates `width`** (fixed in R1) | `transition: width .06s linear` | Layout and paint every frame |
 | E3 | **Wall-clock time** | `Date.now()` in every dispatch | A system clock change can jump survival |
 | E4 | **Fonts remote** (fixed in R0) | Two Google origins plus a render-blocking CSS hop. Unused weights were requested, but browsers download only the faces used, so no bytes were wasted. | ~38% of first load once self-hosted; third-party dependency |
 
@@ -193,9 +193,9 @@ LCP, CLS and INP use the published "good" Core Web Vitals thresholds. The rest a
 | Third-party requests | 0 since R0 (was 2 Google origins) | 0; analytics is the only exception (small, async) | Network panel + CSP |
 | LCP, mobile throttled | 1.88 s median in a local Chrome lab run; Netlify not yet measured | ≤ 2.5 s | Lighthouse / harness |
 | CLS | not measured | ≤ 0.1 | Lighthouse |
-| Key → visual response | not measured | within one frame (~16 ms) in a lab trace; INP ≤ 200 ms | DevTools trace, dev HUD |
+| Key → visual response | R1: 24–40 ms median in Chrome lab runs (§6.1) | within one frame (~16 ms) in a lab trace; INP ≤ 200 ms | DevTools trace, dev HUD |
 | Lighthouse performance (mobile) | not measured | ≥ 90 | each release |
-| React renders/s while playing, not typing | 20 (measured) | ≈ 0–1 | dev HUD counter |
+| React renders/s while playing, not typing | 1 (R1; was 20) | ≈ 0–1 | dev HUD counter |
 | Long tasks during a run | not measured | none over 50 ms | dev HUD |
 | JS heap over a 10-minute run | not measured | flat | DevTools memory |
 
@@ -206,8 +206,8 @@ LCP, CLS and INP use the published "good" Core Web Vitals thresholds. The rest a
 | P1 | **Baseline + dev perf HUD** | Nothing measured at runtime yet | Lighthouse (mobile, throttled) on the Netlify URL; DevTools trace of a 2-minute run on a mid-range Android; 10-minute heap check. A **dev-only** HUD (`?perf`, behind `import.meta.env.DEV`) shows FPS, long tasks and render count. | HUD leaks into production → build size diff must be 0 bytes | R0 |
 | P2 | **Size budgets in CI** | Bundle can grow silently | Zero-dependency script `scripts/check-size.mjs` fails CI over budget (§4.2) | Flaky limits → ~15% headroom; tighten deliberately | R0 |
 | P3 | **Right-sized, self-hosted fonts** (E4, U12) | 5 weights requested, 2 families used; remote request chain | Manrope variable + DM Mono 400 only, Latin subset, `font-display: swap`. Preload the two files used on the first screen (stable names under `public/fonts/`). | Text reflow on swap → preload and check CLS ≤ 0.1; add fallback metric overrides only if CLS fails | R0 |
-| P4 | **Time-driven visuals out of React** (E1) | 20 renders/s; only the meter (continuous), SURVIVAL text (10/s) and TIME (1/s) actually change | Engine gets a pure `nextDeadline(state)` (ms until survival hits 0 or the combo expires). The shell sets **one timer** to that deadline, plus a 1 s safety tick, instead of polling every 50 ms. The meter and clock become small leaf components that compute live values from the snapshot (`health − (now − lastTickAt)`) and update through rAF/refs. The app re-renders only on input and deadlines. Leaf components are `memo`'d with primitive props. | Timing drift in the core loop → the engine stays the only authority and every dispatch re-syncs; unit tests for `nextDeadline` (including pause); a test showing old polling and new scheduling end a scripted run at the same moment; E2E | **R1 step 0** (~1.5 d) |
-| P5 | **Compositor-friendly meter** (E2) | `transition: width .06s linear` animates a layout property every frame | `transform: scaleX()` with `transform-origin: left`; `will-change: transform` on that one element only | Looks different → before/after screenshot compare | with P4 |
+| P4 | **Time-driven visuals out of React** (E1). ✅ R1; final design differs, see §6.2 | 20 renders/s; only the meter (continuous), SURVIVAL text (10/s) and TIME (1/s) actually change | Engine gets a pure `nextDeadline(state)` (ms until survival hits 0 or the combo expires). The shell sets **one timer** to that deadline, plus a 1 s safety tick, instead of polling every 50 ms. The meter and clock become small leaf components that compute live values from the snapshot (`health − (now − lastTickAt)`) and update through rAF/refs. The app re-renders only on input and deadlines. Leaf components are `memo`'d with primitive props. | Timing drift in the core loop → the engine stays the only authority and every dispatch re-syncs; unit tests for `nextDeadline` (including pause); a test showing old polling and new scheduling end a scripted run at the same moment; E2E | **R1 step 0** (~1.5 d) |
+| P5 | **Meter without layout animation** (E2). ✅ R1 as a 20 Hz `transform` write, not a compositor animation (§6.2) | `transition: width .06s linear` animates a layout property every frame | `transform: scaleX()` with `transform-origin: left`; `will-change: transform` on that one element only | Looks different → before/after screenshot compare | with P4 |
 | P6 | **Monotonic clock** (E3) | `Date.now()` in every dispatch; a system clock change can jump survival | One `now()` helper returning `performance.now()`. The engine is unaffected because `now` is already injected. | Behaviour across device sleep → covered by auto-pause (R0.5) | R0 |
 | P7 | **Audio efficiency** | Planned in Phase 2A | One shared `AudioContext` unlocked on the first key press; one reused noise buffer; nodes disconnected on `ended`; voice cap; heartbeat scheduled on the audio clock | Safari quirks → silent fallback (as in 2A) | R1 |
 | P8 | **Long-session soundness** | No data | 10-minute run: heap flat; timers and listeners cleaned up on every screen change | none | measure in R0, fix if found |
@@ -294,6 +294,58 @@ Fully planned in **guide §9 · Phase 2A** (feedback ladder, sound synthesis, sa
 | **Fade the COMBO number as its window closes** (U6) | Makes the invisible 3 s window visible without adding an element (G2). Uses `engine.comboTimer`. Do it in 2A step 4. |
 | **Sound default decision** (§15) | Most of the impact is audio |
 | Effects respect **R0.5 auto-pause** | No effects keep firing while paused |
+
+### 6.1 R1 status and measured results (2026-11-06)
+
+**Implemented:** every step of guide §9 · Phase 2A (2A.7 steps 0–6), plus the combo-window fade (U6). Step 7 (human playtest and tuning) is still to do.
+
+| Area | Result |
+|---|---|
+| Render pipeline | Idle React renders **20/s → 1/s**. The engine ticks only at deadlines (`nextDeadline`), plus a 1 s safety tick; an idle run needs 2 ticks instead of 100, with an identical end state (unit-tested). |
+| Feedback ladder | Thock / thud / chunk with combo pitch / chime / crack / heartbeat; letter press, wrong-letter ghost, word fade-out, combo fade/pop/break, meter glow, danger pulse; haptics on touch devices |
+| Controls | `SOUND OFF/LOW/MED/HIGH` (default **OFF**, D2 still open; a v0.2 "on" migrates to LOW); `FX FULL/SUBTLE/OFF` (default follows the OS reduced-motion setting). This is R1's one new top-bar element (G2). |
+| Safeguards | Voice cap (6) + compressor; ±4% pitch / ±10% volume variation; tier-3 budget (1/s); cadence damping; performance guard (6 frames in a row > 50 ms → SUBTLE for the session) |
+| Size | JS 72.4 → **75.8 KiB** gzip (budget 85) |
+| Tests | 57 unit tests (was 31) |
+
+**Verified in Chrome** (scratch Playwright harness, production CSP): game over and combo break happen on time with deadline scheduling; danger state below 1.5 s; SUBTLE produces zero moving animations and OFF zero animations; sound starts on the first key with one `AudioContext`, and none is created while OFF; the heartbeat plays in danger; the old setting migrates; the top bar fits at 320 px; no CSP violations or console errors.
+
+**Keystroke latency** (Event Timing: key press → next paint, ms; median / p95 of 3 interleaved runs; values come in 8 ms steps):
+
+| CPU, cadence | v0.2.1 | R1 FX OFF | R1 SUBTLE | R1 FULL |
+|---|---|---|---|---|
+| 4× slower, 70 ms/key (burst) | 32 / 40 | 32 / 40 | 40 / 48 | 40 / 48 |
+| 4× slower, 180 ms/key (~65 WPM) | 32 / 40 | 32 / 48 | 32 / 48 | 40 / 56 |
+| 1×, 70 ms/key | 24 / 32 | 24 / 32 | 24 / 32 | 24 / 32 |
+| 1×, 180 ms/key | 24 / 32 | 32 / 32 | 24 / 48 | 32 / 48 |
+
+OFF matches v0.2.1. FULL and SUBTLE add at most one 8 ms step at the median and 8–16 ms at p95: the remaining cost of having any per-key visual feedback. Lab numbers on a desktop; **real phones not yet measured.**
+
+**Open items:** human playtest and tuning of `src/feel/config.ts` (step 7), sound default (D2), a real-device check (sound on iOS, haptics on Android).
+
+### 6.2 Changes from the plan, and why (measured)
+
+| Plan said | Built instead | Why |
+|---|---|---|
+| Animate only `transform`/`opacity` ("GPU-friendly") | Effects animate colour and `top`/`left` on small positioned elements | In Chrome, while any compositor animation is running, keystroke updates landed about a frame later under load. The first R1 build was +30–40 ms median at 4× CPU; the final one is within one 8 ms step. |
+| Meter as a compositor animation, values drawn per frame | One 20 Hz display tick writes the meter `transform`, readouts, combo fade and danger pulse | Measured three designs: a per-frame JS loop made every frame heavier; compositor animations delayed keystrokes; the 20 Hz tick matched v0.2.1 latency at 1/20 of the renders |
+| Per-key squash and dip on every key | Per-key motion only during relaxed typing (≥ ~115 ms between keys); the colour brighten always | In fast bursts, per-key motion overlaps the next keystroke and delays it; sound carries the feel there (an extension of cadence damping) |
+| Word "punches out upward as the next slides in" | The finished word fades and lifts 3 px; the next word appears at once | 3 px movement cap (2A.2) and readability |
+| Performance guard: frames > 32 ms | 6 frames in a row > 50 ms | 32 ms is a normal frame on 30 Hz screens and in phone low-power modes (33 ms), which would have downgraded effects for no reason |
+| Esc/Enter resume in R2 | Done in R0 | Auto-pause made it necessary |
+
+### 6.3 Proposed add-ons (for discussion, not built)
+
+Ideas that came up during R1. **None is implemented.** Each needs your go-ahead, and each is checked against the guardrails (§1.1).
+
+| # | Add-on | What it adds | Guardrail fit | Cost / risk | Suggestion |
+|---|---|---|---|---|---|
+| A1 | **Sound on by default (LOW)** = decision D2 | Most of R1's impact is audio | G1 OK if it starts quietly on the first key press | Some players are surprised by sound | Recommend yes, LOW |
+| A2 | **Sound character choice** (e.g. "soft" / "mechanical") | Personal taste; the synthesis makes variants cheap (no files) | G2: lives inside the SOUND control, no new element | +~1 KiB; more to tune | Later (R3), only if playtesters ask |
+| A3 | **Focus mode**: hide stats while typing, show them on pause/result | Even quieter screen | Strengthens G1/G2 | Players lose live feedback on combo/time | Worth a playtest toggle |
+| A4 | **Separate haptics toggle** | Control for Android players | Fine | One more setting (G2 pressure) | Only if Android players ask; FX OFF already disables it |
+| A5 | **Typing rhythm visual** (subtle pulse in time with your cadence) | Reinforces "find your rhythm" | Risky for G1 (more motion) | Latency risk (§6.1) | Not now |
+| A6 | **Ambient drone that reacts to combo** | Atmosphere | Conflicts with G1 ("Background music loops" are in §16) | Audio fatigue | Not recommended |
 
 ---
 
@@ -500,7 +552,7 @@ Without numbers, "engagement" is opinion. Aim for a **baseline within two weeks*
 | 3 | **Stale app cached** after a release | L / M | Immutable hashed assets, HTML revalidates, no service worker unless needed (and then auto-update) | R0.3, R5 |
 | 4 | **CSP breaks the site** | M / M | Test on preview; separate commit; fonts self-hosted first | R0.3, R0.4 |
 | 5 | **Effects tire or sicken players** | M / H | Phase 2A safeguards: damping, budget, perf guard, reduced-motion, flash limits | R1 |
-| 6 | **Added latency** makes typing feel worse | M / **H** | Effects before paint, transform/opacity only, measured per release | R1 |
+| 6 | **Added latency** makes typing feel worse | M / **H** | Effects before paint; no compositor animations while typing; per-key motion only during relaxed typing; measured per release (§6.1) | R1 |
 | 7 | **Balance change alienates players** | M / M | Tested formula, playtest observation, changelog note | R2.7 |
 | 8 | **Local data corrupt or blocked** | M / L | Versioned, validated, guarded storage; falls back to zeros | R2.4 |
 | 9 | **Daily seed mismatch** between versions | M / M | `WORD_LIST_VERSION` in seed; pinned-sequence test | R4.1 |

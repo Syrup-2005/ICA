@@ -63,7 +63,8 @@ Fails if the JS, fonts or first-load size exceed the budgets in `scripts/check-s
 - Three-second combo window
 - Best combo saved in localStorage
 - Elapsed time, completed words and accuracy
-- Optional generated sound effects
+- Weighty typing feedback: synthesised key sounds (no audio files), a combo pitch that climbs, letter and word motion, a heartbeat when survival runs low
+- `SOUND` (off / low / med / high) and `FX` (full / subtle / off) controls; FX follows the system's reduced-motion setting until you choose
 - Pause and restart; auto-pause when you switch tabs or apps (Esc or Enter resumes)
 
 ## Notes

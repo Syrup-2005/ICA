@@ -84,9 +84,15 @@ ICA/
     │   ├── words.ts           # Loads word lists, getWord, getDifficulty
     │   ├── words.test.ts      # Enforces word-list rules
     │   └── wordlists/         # level-1.txt … level-4.txt: one word per line
+    ├── feel/                  # FEEDBACK: sound, motion, haptics (Phase 2A)
+    │   ├── config.ts          # All feel tuning (timings, pitches, caps)
+    │   ├── rules.ts           # Pure helpers (damping, budget, voice cap…) + rules.test.ts
+    │   ├── audio.ts           # Synthesised sounds (Web Audio), voice cap, compressor
+    │   ├── haptics.ts         # Vibration on touch devices (Android)
+    │   └── useFeel.ts         # Feedback ladder, fired before paint
     ├── hooks/                 # SIDE EFFECTS
-    │   ├── useInterval.ts     # Game clock tick
-    │   └── useSound.ts        # Web Audio tones
+    │   ├── useInterval.ts     # 1 s safety tick
+    │   └── useAnimationFrame.ts # Frame loop (performance guard)
     └── components/            # PRESENTATION ONLY
         ├── ReadyScreen.tsx
         ├── PlayScreen.tsx
@@ -178,6 +184,8 @@ ICA follows a **"pure core, thin shell"** design:
 | `lastTickAt` | Last clock reading; `null` whenever the clock is stopped |
 | `seed` | Random generator state |
 | `feedback`, `feedbackId` | Result of the latest input; the id increments per event |
+| `comboBreakId` | Increments when a live combo's window expires (drives the "crack") |
+| `wrongLetter`, `lastWord` | The rejected letter and the word just completed (for the ghost and fade-out) |
 
 ### 5.4 Events (`GameEvent`)
 
@@ -204,6 +212,7 @@ lastTickAt = now
 
 - **Why it fixes pause by design:** while paused, `lastTickAt` is `null`, so no time is counted. Resume sets `lastTickAt = now`. There are no separate timestamps to shift.
 - **Why input calls `advance` first:** combo and survival are checked at the exact moment of the keystroke, not up to 50 ms late.
+- **When the clock ticks (since v0.3.0):** `nextDeadline(state)` says when something will happen on its own (survival runs out, or the combo window closes). The shell sets one timer for that moment, plus a 1 s safety tick, instead of polling every 50 ms. An idle run needs 2 ticks instead of 100 and ends in exactly the same state (tested).
 
 ### 5.6 Input Processing (`handleInput`)
 
@@ -230,28 +239,37 @@ normalize: lowercase, keep a–z, trim to word length
 
 | Concern | Where | How |
 |---|---|---|
-| Clock | `useInterval` | Dispatches `tick` every 50 ms while `playing` |
-| Sound | `useSound` + effect on `feedbackId` | One tone per feedback event |
-| Shake | Effect on `feedbackId` | 180 ms CSS shake on `'wrong'` |
-| Persistence | Effects on `bestCombo`, `soundEnabled` | `storage.ts` (errors ignored) |
+| Clock | `App.tsx` | One timer at `nextDeadline`, plus a 1 s safety tick (`useInterval`); time from `clock.ts` (`performance.now`) |
+| Readouts | `PlayScreen.tsx` | A 20 Hz display tick writes the meter, SURVIVAL, TIME, combo fade and danger pulse straight to the DOM (no React render) |
+| Feedback | `feel/useFeel.ts` | Sound, motion and haptics per feedback event and combo break, before paint; heartbeat in danger |
+| Performance guard | `App.tsx` (`useAnimationFrame`) | Drops FULL effects to SUBTLE for the session on sustained sub-20 fps |
+| Persistence | `storage.ts` | Best combo, sound level, effects level (errors ignored) |
 | Focus | Effect on `screen` + mouse/key handlers | Keeps the hidden input focused |
-| Keyboard | Effect on `screen` | Ready: any key starts. Playing: Esc pauses. |
+| Keyboard | Effect on `screen` | Ready: any key starts. Playing: Esc pauses. Paused: Esc/Enter resumes. |
+| Auto-pause | Effect on `screen` | Pauses on tab hidden / window blur; never auto-resumes |
 
 ### 5.9 Sound Map
 
-| Feedback | Frequency | Duration |
-|---|---|---|
-| `correct` | 440 Hz | 25 ms |
-| `wrong` | 145 Hz | 80 ms |
-| `complete` | 620 Hz | 110 ms |
-| `complete` on every 10th combo | 880 Hz | 110 ms |
+Synthesised in `feel/audio.ts` (no audio files). Clicks are filtered noise bursts; body and pitch are short tones.
+
+| Event | Sound |
+|---|---|
+| Correct key | "Thock": 8 ms band-passed noise (~4 kHz) + ~150 Hz body (40 ms); softer during fast bursts |
+| Wrong key | "Thud": low-passed noise + ~95 Hz body |
+| Word complete | "Chunk": noise + tone at G3, **one semitone higher per combo step** (wraps each octave) |
+| Every 10th combo | Chime (880 + 1320 Hz), at most once per second |
+| Combo break | "Crack": falling tone 420 → 210 Hz |
+| Danger (< 1.5 s) | Heartbeat every 600 ms |
+
+Levels: OFF / LOW / MED / HIGH (master gain 0 / 0.35 / 0.6 / 0.9); at most 6 voices at once; master compressor.
 
 ### 5.10 Persistence
 
 | Key | Value |
 |---|---|
 | `ica-best-combo` | Best combo (number) |
-| `ica-sound-enabled` | `'true'` / `'false'` |
+| `ica-sound` | `'off'` / `'low'` / `'med'` / `'high'` (an old `ica-sound-enabled = 'true'` reads as `'low'`) |
+| `ica-effects` | `'full'` / `'subtle'` / `'off'`; absent = follow the OS reduced-motion setting |
 
 ### 5.11 UI & Styling
 
@@ -268,7 +286,10 @@ Dark monochrome theme (`#090909` / `#ededed`), Manrope + DM Mono, a 2 px `surviv
 | `COMBO_WINDOW` | 3000 ms | Max gap between words to keep a combo |
 | `MAX_HEALTH` | 5000 ms | Survival capacity, refilled per word |
 | `WRONG_INPUT_PENALTY` | 750 ms | Survival lost per wrong key |
-| `TICK_MS` (`App.tsx`) | 50 ms | Clock update rate |
+| `SAFETY_TICK_MS` (`App.tsx`) | 1000 ms | Re-sync tick; real ticks come from `nextDeadline` |
+| `DISPLAY_TICK_MS` (`PlayScreen.tsx`) | 50 ms | Meter and readout update rate (no React render) |
+
+Feedback tuning (timings, pitches, caps, thresholds) lives in `src/feel/config.ts`.
 
 ### 6.2 Levels (`src/game/words.ts`)
 
@@ -311,6 +332,10 @@ Dark monochrome theme (`#090909` / `#ededed`), Manrope + DM Mono, a 2 px `surviv
 | Shift timers on resume | Paused time was counted as play time |
 | Deduplicated and re-bucketed words | Levels should mean "longer words" |
 | `.gitignore`, `.nvmrc` | Keep dependencies/build output out of git; pin Node for CI and hosting |
+
+### 8.0 Later releases
+
+R0 (v0.2.1, Foundation) and R1 (v0.3.0, Typing Impact) are logged in [`CHANGELOG.md`](../CHANGELOG.md), with status and measurements in [`IMPROVEMENT-PLAN.md`](./IMPROVEMENT-PLAN.md) §5.1 and §6.1.
 
 ### 8.2 Phase 1: Refactor & Tests ✅ (commits `3a0a79d`, `d9228bc`)
 
@@ -378,6 +403,8 @@ The engine is covered by tests, but browser behaviour (focus, sound, shake) has 
 
 ### Phase 2A: Typing Impact
 
+> **Status: implemented in v0.3.0 (R1).** Measured results and the places where the build differs from this plan (for measured reasons): [`IMPROVEMENT-PLAN.md` §6.1–6.2](./IMPROVEMENT-PLAN.md). Step 7 (playtest and tuning) is still open.
+
 **Goal:** keystrokes that *land*: a press with weight, words that clunk into place, combos that build tension. The constraint is ICA's identity, *"a quiet place to find your rhythm"*: **weight, not noise.**
 
 #### 2A.1 Why typing feels light today
@@ -402,9 +429,9 @@ The engine is covered by tests, but browser behaviour (focus, sound, shake) has 
 
 | Tier | Event | Sound | Visual | Haptic* |
 |---|---|---|---|---|
-| 1 | Correct key | "Thock": ~8 ms noise click + ~150 Hz body, ±4% pitch | Letter squash + brighten (~90 ms); stage dips 1 px | 8 ms |
+| 1 | Correct key | "Thock": ~8 ms noise click + ~150 Hz body, ±4% pitch | Letter brightens (~90 ms); during relaxed typing it also presses 2 px and the word dips 1 px | 8 ms |
 | 1 | Wrong key | Dull low-passed thud | Short shake; wrong letter shown faint and struck through, then drops | 20 ms |
-| 2 | Word complete | Deeper "chunk"; pitch **rises one semitone per combo step** | Word punches out upward as the next slides in (≤120 ms); meter refills with a snap and a 50 ms visual hold | 15 ms |
+| 2 | Word complete | Deeper "chunk"; pitch **rises one semitone per combo step** | The finished word fades and lifts 3 px while the next appears at once; meter refills with a 50 ms glow hold | 15 ms |
 | 2 | Combo +1 / break | Break: soft falling "crack" | Combo number pops / drops and dims | — |
 | 3 | Milestone (every 10) | Layered chime | 3 px stage kick + one soft meter glow | 30 ms |
 | — | Danger (< 1.5 s left) | Quiet heartbeat (~1 per 600 ms) | Meter pulses | — |
@@ -419,14 +446,14 @@ Each risk has a safeguard **built into the effect system**, not left to later tu
 |---|---|---|
 | **Overstimulation**, clashing with the "quiet" identity | **Cadence damping** | Tier-1 effects scale down as typing speeds up (fast typists get a smooth "purr", not a rattle). Tiers 2–3 keep full strength, so big moments stay big. |
 | | **Effect budget** | At most one tier-3 effect per second; overlapping requests are merged, never stacked. |
-| **Added latency** | **Latency budget**: effects fire before paint | Key → sound and key → visual within one frame (~16 ms). Only `transform`/`opacity` are animated (no layout work). |
-| | **Performance guard** | If several consecutive frames take > 32 ms, effects drop to SUBTLE for the session. Smooth play beats decoration. |
+| **Added latency** | **Latency budget**: effects fire before paint | Key → sound and key → visual within one frame (~16 ms). **As built:** no compositor animations while typing (they delayed keystrokes, measured); effects use colour and `top`/`left` on small elements; per-key motion runs only during relaxed typing. |
+| | **Performance guard** | If 6 frames in a row take > 50 ms (sustained sub-20 fps), effects drop to SUBTLE for the session. (Not 32 ms: that is a normal frame on 30 Hz screens.) |
 | **Audio fatigue / harshness** | **Voice limit + compressor** | At most 6 sounds at once (the oldest is cut). A master compressor prevents clipping during fast bursts. Volume is low by default, with LOW / MED / HIGH steps. |
 | | **Variation** | Random pitch (±4%) and volume (±10%) on every key. |
 | **Motion sickness** | **Reduced motion → SUBTLE** | Follows the OS setting: no shake, kick or squash; brightness and colour cues remain. |
 | | **Local motion only** | Only the word area moves, never the whole page. Movement is capped at 3 px. |
-| **Photosensitivity** | **No hard flashes** | Glows are low-contrast opacity changes. Never more than 3 flashes per second (WCAG 2.3.1). |
-| **Readability** | **Untyped letters stay still** | Only the just-typed letter animates. The next word appears instantly and fades in, so it is never hidden. |
+| **Photosensitivity** | **No hard flashes** | Glows are low-contrast colour changes. Never more than 3 flashes per second (WCAG 2.3.1). |
+| **Readability** | **Untyped letters stay still** | Only the just-typed letter animates. The next word appears instantly, so it is never hidden. |
 | **Browser audio quirks** (Safari starts audio suspended) | **Unlock on first key** | The first key press (a user gesture) starts audio. Audio resumes after tab switches. If it still fails, the game continues silently with no errors. |
 | **Uneven haptics** | **Progressive enhancement** | Feature-checked; does nothing where unsupported. Nothing depends on it. |
 | **Low-end devices** | **CSS-only effects** | No canvas or particles in 2A; the performance guard covers the rest. Test on one mid-range Android. |
@@ -436,7 +463,7 @@ Each risk has a safeguard **built into the effect system**, not left to later tu
 
 | Control | Options | Default |
 |---|---|---|
-| **EFFECTS** | FULL / SUBTLE / OFF | FULL; SUBTLE if the OS asks for reduced motion |
+| **EFFECTS** (shown as `FX`) | FULL / SUBTLE / OFF | FULL; SUBTLE if the OS asks for reduced motion |
 | **SOUND** | OFF / LOW / MED / HIGH | ⚠️ **Decision needed:** currently OFF, which hides most of 2A. Proposed: LOW, starting on the first key press. |
 
 Both are saved via `storage.ts` and shown in the top bar.
@@ -445,14 +472,14 @@ Both are saved via `storage.ts` and shown in the top bar.
 
 | Piece | Location | Purpose |
 |---|---|---|
-| `comboBreak` feedback | `game/engine.ts` (+ test) | The only engine change; emitted when a live combo expires |
+| Engine additions | `game/engine.ts` (+ tests) | `comboBreakId`, `wrongLetter`, `lastWord`, `nextDeadline` |
 | Sound voices + voice limit + compressor | `src/feel/audio.ts` | Generated in code; no audio files, bundle size unchanged |
 | Event → effect mapping, damping, budget, perf guard | `src/feel/useFeel.ts` | One place for all feel logic (`useLayoutEffect`) |
 | Haptics | `src/feel/haptics.ts` | `navigator.vibrate?.()` wrapper |
 | Tuning values | `src/feel/config.ts` | All timings, pitches, caps: tune by ear, no logic edits |
-| Animations | `styles.css`, `PlayScreen.tsx` | `key={feedbackId}` on the last typed letter replays its animation |
+| Animations | `styles.css`, `PlayScreen.tsx`, `useFeel.ts` | Keyed spans replay short CSS colour animations; motion uses Web Animations on `top`/`left` |
 
-`useSound.ts` is replaced by `src/feel/`.
+`useSound.ts` was replaced by `src/feel/`.
 
 #### 2A.7 Build Order & Done Criteria
 

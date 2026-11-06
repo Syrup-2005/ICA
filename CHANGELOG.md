@@ -3,6 +3,32 @@
 All notable changes to ICA are recorded here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: [SemVer](https://semver.org/).
 
+## [0.3.0] — 2026-11-06
+
+**R1 "Typing Impact"** (guide §9 · Phase 2A; status and measurements in `docs/IMPROVEMENT-PLAN.md` §6.1). Game rules are unchanged.
+
+### Added
+- **Feedback ladder:** key "thock", wrong-key "thud", word "chunk" whose pitch climbs with the combo, milestone chime (every 10), combo-break "crack", heartbeat below 1.5 s survival. All synthesised (no audio files), with a 6-voice cap, a compressor and slight per-key variation.
+- **Visual feedback:** typed letter brightens (and presses during relaxed typing), the rejected letter appears struck through and fades, the finished word fades away, the meter glows on refill and pulses in danger, the COMBO number pops on +1, dims on a break and fades as its 3 s window closes.
+- **Controls:** `SOUND OFF/LOW/MED/HIGH` (default OFF; a saved v0.2 "on" becomes LOW) and `FX FULL/SUBTLE/OFF` (default follows the OS reduced-motion setting). SUBTLE removes all movement; OFF removes all visual effects and haptics.
+- **Haptics** on touch devices that support vibration (Android).
+- **Safeguards:** cadence damping (per-key motion steps aside during fast bursts), at most one milestone effect per second, and a performance guard (sustained sub-20 fps → SUBTLE for the session).
+
+### Changed
+- **The clock ticks only when something happens** (`nextDeadline`: survival runs out or the combo window closes), plus a 1 s safety tick, instead of every 50 ms. An idle run takes 2 ticks instead of 100 and ends in exactly the same state (tested).
+- **Idle React renders 20/s → 1/s:** the meter, SURVIVAL, TIME, combo fade and danger pulse are written by a light 20 Hz display tick, not by React.
+- Effects animate colour and `top`/`left`, not `transform`/`opacity`. Measured: running compositor animations delayed keystroke updates by about a frame under load.
+- Wrong-key shake reduced from 5 px to 3 px (movement cap).
+
+### Measured (Chrome, Event Timing: key → next paint, median / p95)
+- FX OFF matches v0.2.1 (e.g. 32/40 ms at 4× CPU, 24/32 ms at 1×). FULL and SUBTLE add at most one 8 ms step at the median and 8–16 ms at p95.
+- JS 72.4 → 75.8 KiB gzip (budget 85). Tests 31 → 57.
+
+### Not done (needs owner input)
+- Sound default (D2): built as OFF.
+- Human playtest and tuning of `src/feel/config.ts` (Phase 2A step 7); real-device check (iOS sound, Android haptics).
+- Proposed add-ons A1–A6 are listed for discussion in `docs/IMPROVEMENT-PLAN.md` §6.3 (none built).
+
 ## [0.2.1] — 2026-11-06
 
 **R0 "Foundation"** from `docs/IMPROVEMENT-PLAN.md`. Gameplay rules are unchanged.

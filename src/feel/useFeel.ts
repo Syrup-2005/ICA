@@ -18,7 +18,7 @@ const EASE = 'cubic-bezier(.2,.8,.2,1)'
 
 // Web Animations on top/left/colour of small positioned elements (main thread), no React re-render.
 // Deliberately not transform/opacity: measured in Chrome, running compositor animations delay
-// keystroke updates by about a frame under load (docs/IMPROVEMENT-PLAN.md §6.1).
+// keystroke updates by about a frame under load (docs/IMPROVEMENT-PLAN.md §6.1–6.2).
 function animate(el: Element | null | undefined, keyframes: Keyframe[], duration: number): void {
   if (el && typeof el.animate === 'function') el.animate(keyframes, { duration, easing: EASE })
 }
