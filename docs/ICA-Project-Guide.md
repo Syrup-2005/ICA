@@ -2,7 +2,7 @@
 
 > **Scope:** codebase guide, architecture, issue audit, implementation log, roadmap and deployment plan.
 > **Version documented:** v0.2.0 (Phase 0 and Phase 1 complete)
-> **Last updated:** 2026-11-05 · Change history: [`CHANGELOG.md`](../CHANGELOG.md)
+> **Last updated:** 2026-11-06 · Change history: [`CHANGELOG.md`](../CHANGELOG.md)
 
 ---
 
@@ -476,17 +476,20 @@ Sound packs, particles, reactive backgrounds or music.
 
 ---
 
-### Phase 2B: Product Polish
+### Phase 2B: Product Polish → moved to the Improvement Plan
 
-| Area | Task | Issue |
-|---|---|---|
-| Game-over summary | Words, best combo, accuracy, time, WPM; "new best!" uses the tier-3 effect | #7 |
-| Balance | Survival refill scales with word length (engine constant + test) | #5 |
-| Mobile | Visible tap area so the keyboard opens | #4 |
-| Fonts | Self-host (`@fontsource/*`) | #8 |
-| Accessibility | `aria-live` word, focus outlines | — |
-| Sharing | Favicon, Open Graph image, web manifest | — |
-| E2E | One Playwright smoke test | Deferred from Phase 1 |
+The original 2B list has been expanded and re-sequenced into releases in [`IMPROVEMENT-PLAN.md`](./IMPROVEMENT-PLAN.md):
+
+| Original 2B item | Now in |
+|---|---|
+| Fonts (self-host) | **R0** (v0.2.1) |
+| Favicon / Open Graph / manifest | **R0** (identity assets); installable manifest optional in **R5** |
+| Game-over summary, balance, mobile input, accessibility basics, E2E test | **R2** (v0.4.0) |
+| Share | **R4** (v0.6.0), optional |
+
+New items (auto-pause, readability, instant replay, personal bests, word pools, daily run) are described there, together with the identity guardrails every feature must pass.
+
+---
 
 ### Phase 3: Optional Backend
 
@@ -499,40 +502,21 @@ Leaderboards (Supabase/Firebase), auth, privacy-friendly analytics. Client-submi
 ### 10.1 Model
 Static site: `npm run build` → `dist/`. No server needed.
 
-### 10.2 Hosting Options
+### 10.2 Hosting: Netlify (current)
 
-| Option | Cost | HTTPS | Custom domain | PR previews |
-|---|---|---|---|---|
-| **Cloudflare Pages** ⭐ | Free | Auto | Easy | Yes |
-| Netlify / Vercel | Free tier | Auto | Easy | Yes |
-| GitHub Pages | Free | Auto | Yes | No (needs `base` unless custom domain) |
+ICA is deployed on **Netlify**. The dashboard settings (build command, publish directory, Node version, production branch) are **not yet recorded in the repo**; capturing them is task R0.1 in the Improvement Plan.
 
-### 10.3 Cloudflare Pages Steps
+| Netlify feature | Use for ICA |
+|---|---|
+| Git-connected builds | Each push to the production branch builds and deploys |
+| Deploy Previews | A URL per pull request, for phone testing and playtesters |
+| Failed build keeps the last good deploy live | Safe with tests in the build command |
+| Instant rollback | Publish an earlier deploy if a release misbehaves |
+| Custom domain + automatic HTTPS | Launch (R5) |
 
-1. Merge `phase-1-refactor` into `main` and push to GitHub. CI runs automatically.
-2. Cloudflare → **Workers & Pages → Create → Pages → Connect to Git** → select the repo.
-3. Build settings:
+### 10.3 Configuration (planned)
 
-   | Setting | Value |
-   |---|---|
-   | Build command | `npm run build` |
-   | Output directory | `dist` |
-   | Node version | read from `.nvmrc` (22); or set `NODE_VERSION=22` |
-
-4. Each push to `main` deploys to `https://<project>.pages.dev`; PRs get preview URLs.
-5. **Custom domain:** Pages project → Custom domains → add `ica.yourdomain.com`. If DNS is on Cloudflare, records are automatic; otherwise add `CNAME ica → <project>.pages.dev`. HTTPS is automatic.
-6. **Headers:** add `public/_headers`:
-   ```
-   /assets/*
-     Cache-Control: public, max-age=31536000, immutable
-
-   /*
-     X-Content-Type-Options: nosniff
-     Referrer-Policy: strict-origin-when-cross-origin
-     X-Frame-Options: DENY
-     Content-Security-Policy: default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'
-   ```
-   (Remove the Google domains once fonts are self-hosted.)
+Build settings, test gating, cache and security headers move into a versioned `netlify.toml`. The proposed file, ordering constraints (audit first, fonts self-hosted before CSP) and rollout are in [`IMPROVEMENT-PLAN.md` §11](./IMPROVEMENT-PLAN.md). **Not applied yet.**
 
 ### 10.4 CI (in place)
 `.github/workflows/ci.yml` runs `npm ci → npm test → npm run build` on every push to `main` and every PR. Turn on GitHub branch protection for `main` and require this check.
@@ -544,13 +528,13 @@ Static site: `npm run build` → `dist/`. No server needed.
 - [ ] Manual play-through (Section 8.2)
 - [ ] Tested on Chrome, Firefox, Safari and one mobile device
 - [ ] Favicon, Open Graph tags
-- [ ] `_headers` deployed and verified
+- [ ] Headers in `netlify.toml` deployed and verified
 - [ ] Custom domain on HTTPS
 - [ ] Lighthouse review
 
 ### 10.6 Release Workflow
 ```
-branch → PR → CI (tests + build) + preview URL → review → merge → auto-deploy
+branch → PR → CI (tests + build) + Netlify Deploy Preview → review → merge → auto-deploy (rollback = publish previous deploy)
 ```
 For each release, update `CHANGELOG.md`, bump `version` in `package.json` (the footer updates automatically), and tag (`git tag v0.2.0`).
 
