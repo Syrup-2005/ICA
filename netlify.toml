@@ -1,0 +1,31 @@
+# Netlify configuration, versioned with the code.
+# Settings here OVERRIDE the build settings in the Netlify dashboard.
+# A failing test or a blown size budget fails the build, and Netlify keeps the last good deploy live.
+
+[build]
+  command = "npm test && npm run build && npm run size"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Hashed build files never change: cache for a year.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Font file names carry the font version (rename the file whenever it changes).
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# HTML keeps Netlify's default (revalidate on every visit), so new releases show up immediately.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"

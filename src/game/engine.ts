@@ -7,7 +7,7 @@ export const WRONG_INPUT_PENALTY = 750
 
 export type Screen = 'ready' | 'playing' | 'paused' | 'gameover'
 
-// Result of the latest input, used by the UI for sound and shake effects.
+// Result of the latest input, used by the UI for sound, motion and haptic feedback.
 export type Feedback = 'none' | 'correct' | 'wrong' | 'complete'
 
 export interface GameState {
@@ -26,6 +26,9 @@ export interface GameState {
   seed: number // PRNG state; keeps the reducer pure and deterministic
   feedback: Feedback
   feedbackId: number // increments on every feedback so repeated values still fire
+  comboBreakId: number // increments when a live combo's window expires
+  wrongLetter: string // the letter most recently rejected (for the UI)
+  lastWord: string // the word most recently completed (for the UI transition)
 }
 
 export type GameEvent =
@@ -53,6 +56,9 @@ export function createInitialState(bestCombo = 0, seed = 1): GameState {
     seed,
     feedback: 'none',
     feedbackId: 0,
+    comboBreakId: 0,
+    wrongLetter: '',
+    lastWord: '',
   }
 }
 
@@ -87,11 +93,13 @@ function advance(state: GameState, now: number): GameState {
   const delta = Math.max(0, now - state.lastTickAt)
   const health = Math.max(0, state.health - delta)
   const comboTimer = Math.max(0, state.comboTimer - delta)
+  const comboBroke = state.combo > 0 && state.comboTimer > 0 && comboTimer === 0
   return {
     ...state,
     health,
     comboTimer,
     combo: comboTimer === 0 ? 0 : state.combo,
+    comboBreakId: state.comboBreakId + (comboBroke ? 1 : 0),
     elapsed: state.elapsed + delta,
     lastTickAt: now,
     screen: health === 0 ? 'gameover' : state.screen,
@@ -108,10 +116,12 @@ function handleInput(previous: GameState, value: string, now: number): GameState
 
   if (next !== state.word.slice(0, next.length)) {
     const health = Math.max(0, state.health - WRONG_INPUT_PENALTY)
+    const mismatch = [...next].findIndex((letter, i) => letter !== state.word[i])
     return {
       ...state,
       mistakes: state.mistakes + 1,
       health,
+      wrongLetter: next[mismatch] ?? '',
       screen: health === 0 ? 'gameover' : state.screen,
       ...withFeedback(state, 'wrong'),
     }
@@ -135,6 +145,7 @@ function handleInput(previous: GameState, value: string, now: number): GameState
     ...progressed,
     ...drawWord(getDifficulty(wordsCompleted), state.word, state.seed),
     typed: '',
+    lastWord: state.word,
     combo,
     bestCombo: Math.max(state.bestCombo, combo),
     wordsCompleted,
@@ -142,6 +153,14 @@ function handleInput(previous: GameState, value: string, now: number): GameState
     comboTimer: COMBO_WINDOW,
     ...withFeedback(state, 'complete'),
   }
+}
+
+// Milliseconds after `lastTickAt` until the next moment the state changes on its own
+// (survival runs out or the combo window closes), or null while the clock is stopped.
+// The shell schedules a single tick for this moment instead of polling.
+export function nextDeadline(state: GameState): number | null {
+  if (state.screen !== 'playing' || state.lastTickAt === null) return null
+  return state.comboTimer > 0 ? Math.min(state.health, state.comboTimer) : state.health
 }
 
 export function normalizeInput(value: string): string {

@@ -1,4 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+/* Self-hosted fonts (SIL OFL 1.1, licences in /fonts). Latin subset only; preloaded in index.html.
+   File names carry the font version: change the name whenever a file changes (they are cached as immutable). */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('/fonts/manrope-latin-wght-v5.3.0.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/dm-mono-latin-400-v5.3.0.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 :root {
   font-family: 'Manrope', sans-serif;
@@ -34,29 +51,58 @@ h1 { font-size: clamp(36px, 6vw, 72px); line-height: 1.08; letter-spacing: -.075
 .stats-row { justify-content: center; gap: clamp(35px, 8vw, 120px); padding-top: 70px; }
 .stat { display: flex; flex-direction: column; gap: 9px; min-width: 54px; }
 .stat span { color: #656565; font: 10px 'DM Mono', monospace; letter-spacing: .13em; }
-.stat strong { color: #e8e8e8; font: 20px 'DM Mono', monospace; font-weight: 400; }
+.stat strong { position: relative; color: #e8e8e8; font: 20px 'DM Mono', monospace; font-weight: 400; }
 .game-stage { padding-top: 20px; padding-bottom: 30px; }
 .game-stage .eyebrow { margin-bottom: 34px; }
 .dot { color: #666; }
-.word-display { min-height: 1.3em; font: clamp(38px, 7vw, 76px) 'DM Mono', monospace; letter-spacing: -.065em; white-space: nowrap; }
+.word-display { position: relative; min-height: 1.3em; font: clamp(38px, 7vw, 76px) 'DM Mono', monospace; letter-spacing: -.065em; white-space: nowrap; }
 .typed-text { color: #f0f0f0; }
 .remaining-text { color: #555; }
 .typing-hint { color: #555; font: 10px 'DM Mono', monospace; letter-spacing: .16em; margin-top: 35px; }
 .typing-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 .game-footer { width: min(560px, 100%); margin: 0 auto 32px; }
-.survival-track { width: 100%; height: 2px; background: #242424; overflow: hidden; }
-.survival-track-fill { height: 100%; background: #ddd; transition: width .06s linear; }
+.survival-track { position: relative; width: 100%; height: 2px; background: #242424; overflow: hidden; }
+/* Scaled by PlayScreen's 20 Hz display tick (transform, no layout). */
+.survival-track-fill { width: 100%; height: 100%; background: #ddd; transform-origin: left center; }
+.survival-glow { position: absolute; inset: 0; background: transparent; pointer-events: none; }
 .footer-details { justify-content: space-between; gap: 12px; margin-top: 15px; color: #555; font: 9px 'DM Mono', monospace; letter-spacing: .08em; }
 .footer-details strong { color: #aaa; font-weight: 400; margin-left: 5px; }
 .site-footer { justify-content: space-between; color: #484848; font: 9px 'DM Mono', monospace; letter-spacing: .1em; margin-top: auto; }
 .pause-actions { gap: 25px; margin-top: 55px; }
 .primary-button { background: #eee; color: #111; border: 1px solid #eee; padding: 13px 22px; font: 10px 'DM Mono', monospace; letter-spacing: .1em; cursor: pointer; }
-.shake { animation: shake .18s ease; }
-@keyframes shake { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-5px); } 70% { transform: translateX(5px); } }
+
+/* ---- Feedback effects (guide §9 · Phase 2A; measured design in docs/IMPROVEMENT-PLAN.md §6.1–6.2) ----
+   data-effects on .app-shell: full = everything; subtle = no movement (colour cues stay); off = none.
+   Movement is capped at 3 px and only the word area moves.
+   Effects animate colour and top/left on small positioned elements, NOT transform/opacity:
+   measured in Chrome, running compositor animations delay keystroke updates by a frame under load.
+   Motion triggered from JS lives in src/feel/useFeel.ts; the danger pulse in PlayScreen's display tick. */
+
+/* The letter just typed brightens (its press/drop in full is done by useFeel during relaxed typing). */
+.press { position: relative; }
+[data-effects="full"] .press, [data-effects="subtle"] .press { animation: press-brighten 90ms ease-out; }
+@keyframes press-brighten { from { color: #8f8f8f; } }
+
+/* A rejected letter appears faintly in the slot, struck through, and fades (drops 3 px in full). */
+.slot { position: relative; }
+.ghost { position: absolute; left: 0; top: 0; color: rgba(240, 240, 240, 0); text-decoration: line-through; pointer-events: none; animation: ghost-fade 220ms ease-out; }
+[data-effects="full"] .ghost { animation-name: ghost-drop; }
+@keyframes ghost-fade { from { color: rgba(240, 240, 240, .6); } }
+@keyframes ghost-drop { from { color: rgba(240, 240, 240, .6); top: 0; } to { top: 3px; } }
+
+/* Word change: the next word appears at once; the finished one fades (and lifts 3 px in full). */
+.word-out { position: absolute; left: 50%; top: 0; color: rgba(240, 240, 240, 0); pointer-events: none; transform: translateX(-50%); animation: word-out-fade 120ms ease-out; }
+[data-effects="full"] .word-out { animation-name: word-out-lift; }
+@keyframes word-out-fade { from { color: rgba(240, 240, 240, .6); } }
+@keyframes word-out-lift { from { color: rgba(240, 240, 240, .6); top: 0; } to { top: -3px; } }
+
+[data-effects="off"] .ghost, [data-effects="off"] .word-out { display: none; }
+
 @media (max-width: 600px) {
   .app-shell { padding: 24px 22px 20px; }
   .stats-row { gap: 0; justify-content: space-between; padding-top: 55px; }
   .stat strong { font-size: 17px; }
+  .topbar-actions { gap: 16px; }
   .center-stage { padding: 55px 0 70px; }
   .game-stage { padding-top: 30px; }
   .footer-details { font-size: 8px; flex-wrap: wrap; }

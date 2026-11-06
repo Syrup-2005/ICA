@@ -1,0 +1,36 @@
+# ICA word list: level 4 (challenging words)
+#
+# One word per line. Lines starting with # and blank lines are ignored.
+# Rules (checked by `npm test`): letters a–z only, 13 or more letters,
+# no duplicates across levels.
+constellation
+accountability
+anachronistic
+circumstantial
+consequential
+consciousness
+contradiction
+deterioration
+extraordinary
+inconsequential
+interpretation
+misconception
+misunderstanding
+multidimensional
+overcomplicated
+philosophical
+psychological
+reconciliation
+sophisticated
+transformation
+unpredictable
+unprecedented
+unintentionally
+disproportionate
+incomprehensible
+infrastructure
+interconnected
+metamorphosis
+simultaneously
+irreplaceable
+vulnerability

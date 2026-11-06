@@ -15,6 +15,7 @@ export function PauseScreen({ wordsCompleted, combo, onResume, onRestart }: Paus
         <button className="primary-button" onClick={onResume}>RESUME</button>
         <button className="quiet-button" onClick={onRestart}>RESTART</button>
       </div>
+      <p className="typing-hint">ESC OR ENTER TO RESUME</p>
     </section>
   )
 }
