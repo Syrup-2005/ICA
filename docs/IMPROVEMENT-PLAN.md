@@ -11,18 +11,19 @@
 1. [The Idea to Protect](#1-the-idea-to-protect)
 2. [Starting Point](#2-starting-point)
 3. [Release Plan at a Glance](#3-release-plan-at-a-glance)
-4. [R0 · v0.2.1 Foundation](#4-r0--v021-foundation)
-5. [R1 · v0.3.0 Typing Impact](#5-r1--v030-typing-impact)
-6. [R2 · v0.4.0 Run Experience](#6-r2--v040-run-experience)
-7. [R3 · v0.5.0 Content & Variety](#7-r3--v050-content--variety)
-8. [R4 · v0.6.0 Return Loops (optional)](#8-r4--v060-return-loops-optional)
-9. [R5 · v1.0.0 Launch](#9-r5--v100-launch)
-10. [R6 · Online Features (gated)](#10-r6--online-features-gated)
-11. [Netlify Operations](#11-netlify-operations)
-12. [Measuring Engagement](#12-measuring-engagement)
-13. [Risk Register](#13-risk-register)
-14. [Decisions Needed](#14-decisions-needed)
-15. [Not Planned](#15-not-planned)
+4. [Performance, Efficiency & Usability Workstream](#4-performance-efficiency--usability-workstream)
+5. [R0 · v0.2.1 Foundation](#5-r0--v021-foundation)
+6. [R1 · v0.3.0 Typing Impact](#6-r1--v030-typing-impact)
+7. [R2 · v0.4.0 Run Experience](#7-r2--v040-run-experience)
+8. [R3 · v0.5.0 Content & Variety](#8-r3--v050-content--variety)
+9. [R4 · v0.6.0 Return Loops (optional)](#9-r4--v060-return-loops-optional)
+10. [R5 · v1.0.0 Launch](#10-r5--v100-launch)
+11. [R6 · Online Features (gated)](#11-r6--online-features-gated)
+12. [Netlify Operations](#12-netlify-operations)
+13. [Measuring Engagement](#13-measuring-engagement)
+14. [Risk Register](#14-risk-register)
+15. [Decisions Needed](#15-decisions-needed)
+16. [Not Planned](#16-not-planned)
 
 ---
 
@@ -40,14 +41,15 @@ ICA is **a quiet, endless typing arcade**: one word at a time, monochrome, no ba
 | G4 | **The player's pace** | No punishment for absence, no streak counters, no time-gated rewards, no dark patterns. |
 | G5 | **Instant** | One key press to start. Fast load. Nothing ever blocks or delays typing. |
 | G6 | **For everyone** | Keyboard-only, readable, reduced-motion respected. |
+| G7 | **Light & smooth** | ICA stays tiny and fast on the cheapest phone. The budgets in §4.2 are part of the identity: a feature that breaks them must remove something else. |
 
 ### 1.2 Feature Filter (apply to every item and every PR)
 
-1. Does it respect G1–G6? (Any "no" → reject or redesign.)
+1. Does it respect G1–G7? (Any "no" → reject or redesign.)
 2. Does it help the player **type, improve, or come back by choice**?
 3. Can it be switched off, or ignored, without losing anything?
 4. Is it testable (engine rule + unit test, or a manual check in the release checklist)?
-5. Is it worth its weight: bundle size, code, ongoing maintenance?
+5. Is it worth its weight: performance budgets (§4.2), code, ongoing maintenance?
 
 ### 1.3 What "engagement" means for ICA
 
@@ -89,7 +91,14 @@ ICA is **a quiet, endless typing arcade**: one word at a time, monochrome, no ba
 | U11 | **No identity assets** | No favicon, preview image or manifest in `index.html` | Weak first impression, bare link previews |
 | U12 | **Remote fonts** | `@import` from Google Fonts | Render-blocking; visitor IPs go to Google |
 | U13 | **Tone mismatch (to decide)** | Level 1 mixes calm words (`drift`, `hush`) with slang (`rizz`, `yeet`, `simp`) | Slang may clash with the "quiet" feel. A brand decision, not a bug. |
-| U14 | **Footer vs mechanic (to decide)** | Footer says "TYPE AT YOUR OWN PACE"; the survival meter sets the pace | Possible mismatch, which an optional calm mode would resolve (§7.3) |
+| U14 | **Footer vs mechanic (to decide)** | Footer says "TYPE AT YOUR OWN PACE"; the survival meter sets the pace | Possible mismatch, which an optional calm mode would resolve (§8.3) |
+| U15 | **Long words clipped on narrow phones** | Computed: a 16-letter word is 325 px wide; 276 px is available at a 320 px screen and 316 px at 360 px; `overflow: hidden` cuts the end (§4.4) | Level-4 words can be unreadable on small phones |
+| U16 | **Small touch targets** | Top-bar buttons ≈ 30 px tall | Easy to miss on a phone |
+| U17 | **Zoom, orientation and shortcut hints not audited** | No test yet at 200% zoom or on a landscape phone; Esc is hinted only during play | Unknown problems for some players |
+| E1 | **React re-renders 20×/s** | `useInterval(tick, 50)` creates new state every tick; only the meter, SURVIVAL (10/s) and TIME (1/s) change visibly | Wasted CPU and battery; less headroom for effects |
+| E2 | **Meter animates `width`** | `transition: width .06s linear` | Layout and paint every frame |
+| E3 | **Wall-clock time** | `Date.now()` in every dispatch | A system clock change can jump survival |
+| E4 | **Fonts over-requested and remote** | 5 weights requested, 2 families used; Google request chain | ~38% of first load once self-hosted; third-party dependency |
 
 ---
 
@@ -104,63 +113,161 @@ Foundation  ──▶  Typing Impact ─▶ Run Experience ─▶ Content &  ─
 
 | Release | Version | Theme | Effort* | Fixes |
 |---|---|---|---|---|
-| **R0** | 0.2.1 | Netlify hardening, safety net, measurement, quick fairness wins | ~1.5 days | U1, U11, U12 |
-| **R1** | 0.3.0 | Typing impact (full plan in guide §9 · Phase 2A) | ~5 days | feel |
-| **R2** | 0.4.0 | Results, replay flow, readability, balance, mobile | ~5 days | U2–U8, U10 |
+| **R0** | 0.2.1 | Netlify hardening, safety net, measurement, size budgets, quick fairness wins | ~2 days | U1, U11, U12, E3, E4 |
+| **R1** | 0.3.0 | Render pipeline first, then typing impact (guide §9 · Phase 2A) | ~6.5 days | feel, E1, E2 |
+| **R2** | 0.4.0 | Results, replay flow, readability, balance, mobile, small-screen fit | ~5.5 days | U2–U8, U10, U15, U16 |
 | **R3** | 0.5.0 | Bigger vocabulary, tone decision, optional calm mode | ~3 days | U9, U13, U14 |
 | **R4** | 0.6.0 | Daily run, share, local stats (all optional) | ~4 days | engagement |
-| **R5** | 1.0.0 | Custom domain, audit, final polish | ~2 days | launch |
+| **R5** | 1.0.0 | Custom domain, audits, final polish | ~2.5 days | launch |
 | **R6** | 1.x | Leaderboard etc. (only on demand) | TBD | — |
 
 \*Rough estimates for one developer; each release is time-boxed. Unfinished items move to the next release or are dropped, never allowed to stretch the release.
 
-**Why this order:** R0 makes shipping safe and measurable. R1 does the most for how the game *feels*. R2 turns a good run into a satisfying result and quick replay. R3 and R4 add reasons to come back, so they come only after the core is solid.
+**Why this order:** R0 makes shipping safe and measurable (including a performance baseline and budgets, §4). R1 starts by taking time-driven visuals out of React (P4), so its effects run on a cheap frame, then does the most for how the game *feels*. R2 turns a good run into a satisfying result and quick replay. R3 and R4 add reasons to come back, so they come only after the core is solid.
 
 ### 3.1 Rules for every release
 
 - Branch → PR → CI green → **Netlify Deploy Preview** checked → merge → auto-deploy.
 - Update `CHANGELOG.md`, bump `package.json` version (footer follows), tag `vX.Y.Z`.
 - Game rules change only in `src/game/engine.ts`, with a test.
-- Release checklist (§11.4): keyboard-only run, reduced-motion check, one real phone, contrast check, bundle size.
+- Release checklist (§12.4): keyboard-only run, reduced-motion check, one real phone, contrast check, bundle size.
 
 ---
 
-## 4. R0 · v0.2.1 Foundation
+## 4. Performance, Efficiency & Usability Workstream
+
+**Goal:** ICA stays tiny, instant and smooth on the cheapest phone, and easy to use on any screen. This is a standing part of every release, not a one-off clean-up. Being light is part of being quiet (guardrail G7).
+
+**Rule: measure first.** No optimisation lands without a before/after number. Several "obvious" targets turned out not to matter (§4.1), so effort goes where the data points.
+
+### 4.1 What the measurements say (v0.2.0, 2026-11-06)
+
+| Finding | Value | How obtained |
+|---|---|---|
+| JS bundle | 229.7 kB raw · 72.1 kB gzip · 62.1 kB brotli | `npm run build` |
+| …of which React + ReactDOM | 217.7 kB raw · 67.5 kB gzip · 58.0 kB brotli | bundled alone with esbuild |
+| …so ICA's own code | ≈ 12 kB raw (≈ 4.6 kB gzip), **about 6% of the JS** | difference of the two |
+| CSS | 3.6 kB raw · 1.4 kB gzip | build |
+| Fonts today | Remote (Google Fonts): an extra request chain. Requested but **unused**: DM Mono 500, Manrope 600/700 | CSS inspected |
+| Fonts if self-hosted, used weights only | Manrope variable (Latin) 24.3 kB + DM Mono 400 (Latin) 14.5 kB ≈ **39 kB** woff2 | font packages inspected |
+| First-load transfer after R0 (estimate) | ≈ 102 kB: 62 JS + 39 fonts + ~1 CSS/HTML. **Fonts ≈ 38%.** | sum |
+| Preact alternative | Preact + compat for the hooks ICA uses: 7.1 kB gzip · 6.4 kB brotli (React: 67.5 / 58.0). Estimated first load ≈ 50 kB. | bundled in isolation; **a whole-app swap was not built or tested** |
+| React renders while playing | **20 per second** | read from code (`useInterval(tick, 50)`, new state every tick); not profiled |
+| DM Mono character width | 0.600 em | read from the font file |
+| Longest words | 16 letters (`incomprehensible`, `misunderstanding`, `multidimensional`, `disproportionate`) | `words.ts` |
+
+**Not measured yet** (task P1): Lighthouse scores, real frame rate and input latency, behaviour on a real phone, memory over a long run.
+
+**What this means:**
+1. **ICA's own code is not the weight.** 94% of the JS is React. Shrinking app code is pointless.
+2. **Fonts are as heavy as the JS.** Dropping unused weights and self-hosting is the cheapest real win.
+3. **The biggest runtime waste is structural:** 20 React renders a second for visuals that change 1–10 times a second.
+4. **The biggest "lightweight" lever is the framework itself,** which is a gated decision (P10), not a default.
+
+### 4.2 Budgets (proposed)
+
+LCP, CLS and INP use the published "good" Core Web Vitals thresholds. The rest are proposals to confirm after the P1 baseline.
+
+| Metric | Now | Budget / target | Checked by |
+|---|---|---|---|
+| JS (gzip) | 72.1 kB | ≤ 85 kB (lower it if P10 is adopted) | CI size script (P2) |
+| Fonts (woff2) | remote | ≤ 45 kB | CI size script |
+| First-load total (estimate) | ~102 kB after R0 | ≤ 120 kB | CI size script |
+| Third-party requests | 2 origins (Google) | 0; analytics is the only exception (small, async) | Network panel + CSP |
+| LCP, mobile throttled | not measured | ≤ 2.5 s | Lighthouse |
+| CLS | not measured | ≤ 0.1 | Lighthouse |
+| Key → visual response | not measured | within one frame (~16 ms) in a lab trace; INP ≤ 200 ms | DevTools trace, dev HUD |
+| Lighthouse performance (mobile) | not measured | ≥ 90 | each release |
+| React renders/s while playing, not typing | 20 (from code) | ≈ 0–1 | dev HUD counter |
+| Long tasks during a run | not measured | none over 50 ms | dev HUD |
+| JS heap over a 10-minute run | not measured | flat | DevTools memory |
+
+### 4.3 Efficiency tasks
+
+| # | Task | Evidence | Change | Risk → mitigation | When |
+|---|---|---|---|---|---|
+| P1 | **Baseline + dev perf HUD** | Nothing measured at runtime yet | Lighthouse (mobile, throttled) on the Netlify URL; DevTools trace of a 2-minute run on a mid-range Android; 10-minute heap check. A **dev-only** HUD (`?perf`, behind `import.meta.env.DEV`) shows FPS, long tasks and render count. | HUD leaks into production → build size diff must be 0 bytes | R0 |
+| P2 | **Size budgets in CI** | Bundle can grow silently | Zero-dependency script `scripts/check-size.mjs` fails CI over budget (§4.2) | Flaky limits → ~15% headroom; tighten deliberately | R0 |
+| P3 | **Right-sized, self-hosted fonts** (E4, U12) | 5 weights requested, 2 families used; remote request chain | Manrope variable + DM Mono 400 only, Latin subset, `font-display: swap`. Preload the two files used on the first screen (stable names under `public/fonts/`). | Text reflow on swap → preload and check CLS ≤ 0.1; add fallback metric overrides only if CLS fails | R0 |
+| P4 | **Time-driven visuals out of React** (E1) | 20 renders/s; only the meter (continuous), SURVIVAL text (10/s) and TIME (1/s) actually change | Engine gets a pure `nextDeadline(state)` (ms until survival hits 0 or the combo expires). The shell sets **one timer** to that deadline, plus a 1 s safety tick, instead of polling every 50 ms. The meter and clock become small leaf components that compute live values from the snapshot (`health − (now − lastTickAt)`) and update through rAF/refs. The app re-renders only on input and deadlines. Leaf components are `memo`'d with primitive props. | Timing drift in the core loop → the engine stays the only authority and every dispatch re-syncs; unit tests for `nextDeadline` (including pause); a test showing old polling and new scheduling end a scripted run at the same moment; E2E | **R1 step 0** (~1.5 d) |
+| P5 | **Compositor-friendly meter** (E2) | `transition: width .06s linear` animates a layout property every frame | `transform: scaleX()` with `transform-origin: left`; `will-change: transform` on that one element only | Looks different → before/after screenshot compare | with P4 |
+| P6 | **Monotonic clock** (E3) | `Date.now()` in every dispatch; a system clock change can jump survival | One `now()` helper returning `performance.now()`. The engine is unaffected because `now` is already injected. | Behaviour across device sleep → covered by auto-pause (R0.5) | R0 |
+| P7 | **Audio efficiency** | Planned in Phase 2A | One shared `AudioContext` unlocked on the first key press; one reused noise buffer; nodes disconnected on `ended`; voice cap; heartbeat scheduled on the audio clock | Safari quirks → silent fallback (as in 2A) | R1 |
+| P8 | **Long-session soundness** | No data | 10-minute run: heap flat; timers and listeners cleaned up on every screen change | none | measure in R0, fix if found |
+| P9 | **Static first paint** (gated) | The ready screen only appears after the JS runs | Identical static markup for the ready screen in `index.html`, replaced by React on load | Flash or duplicate content → identical markup, E2E check | only if LCP > 2.5 s after P3 |
+| P10 | **Framework weight** (gated, **not by default**) | React is 94% of the JS | Alias React to `preact/compat`: runtime 7.1 kB gzip vs 67.5, roughly halving first load | Behavioural differences (controlled input, focus, events) → engine untouched; E2E on Chrome, Firefox and Safari plus a real phone; Netlify rollback | decision D10 after P1 |
+| P11 | **Delivery checks** | Unverified | Confirm gzip/brotli is served, HTML revalidates, assets are immutable, no third-party requests, modern build `target` | none | R0, with `netlify.toml` |
+
+**On P10:** 62 kB brotli is already small, and React is a known quantity. Swap only if the real-device Lighthouse run (P1) misses the budgets, or if you value the size for its own sake.
+
+### 4.4 Usability tasks (small screens, touch, keyboard)
+
+| # | Finding | Evidence | Change | Risk → mitigation | When |
+|---|---|---|---|---|---|
+| U15 | **Long words don't fit narrow phones** | **Computed, not yet seen in a browser.** DM Mono is 0.600 em wide, letter-spacing is −0.065 em and the font-size floor is 38 px, so a 16-letter word is **325 px** wide. Available width is 276 px at a 320 px screen and 316 px at 360 px: overflow of **49 px** and **9 px**. 375 px and wider fit. `.app-shell` has `overflow: hidden`, so the last letters are clipped. | Size the word from its length in CSS: set `--chars` inline and use `font-size: min(clamp(…), calc((100vw − padding) / (var(--chars) × 0.54)))`. No JS measuring. | Smaller letters on long words → floor stays above ~30 px (≈ 32 px at 320 px); verify the four longest words at 320 and 360 px | **R2** (high priority) |
+| U10+ | **Mobile input quirks** (extends U10) | Unverified on devices | Input `font-size ≥ 16 px` (stops iOS focus-zoom), `autoCorrect="off"`, `enterKeyHint`, `touch-action: manipulation`, `100dvh` layout | Can't verify without devices → Deploy Preview on a real iPhone and Android | R2.8 |
+| U16 | **Small touch targets** | Top-bar buttons are ≈ 30 px tall (11 px text + 8 px padding) | Grow the hit area to ≥ 44 px with padding or a pseudo-element, without changing how it looks | Overlapping neighbours → the 24 px gap already between them | R2 |
+| U17 | **Zoom, orientation and shortcut hints not audited** | `.center-stage` uses 70 px/90 px vertical padding; Esc is hinted only during play | Test 200% zoom, OS large text and landscape phones (relax padding with `clamp`/`dvh` if needed). Show Esc/Enter hints on the pause and result screens as plain text. | none | R2 test, R5 audit |
+
+### 4.5 Effort impact
+
+| Release | Added | Includes |
+|---|---|---|
+| R0 | +0.5 day | P1, P2, P3, P6, P11 |
+| R1 | +1.5 days | P4, P5 (P7 sits inside the existing audio work) |
+| R2 | +0.5 day | U15, U10+, U16, U17 |
+| R5 | +0.5 day | Lighthouse and zoom audits |
+| Gated | ~0.5 day (P9), ~1 day plus testing (P10) | only on a "go" |
+
+### 4.6 Standing rules
+
+1. **Measure before and after** and put both numbers in the changelog (e.g. "renders/s 20 → ~0", "third-party requests 2 → 0").
+2. **Runtime dependencies stay minimal.** Today only React and ReactDOM; fonts are static files. Anything new needs a size delta and a reason.
+3. **Budgets are release criteria**, listed in the checklist (§12.4).
+4. **Effects obey the budgets too.** Any Phase 2A effect that costs a frame is cut.
+
+---
+
+## 5. R0 · v0.2.1 Foundation
 
 **Goal:** make production safe to change, and fix what loses players' runs unfairly, before adding anything.
 
 | # | Task | Why | Approach | Risk → mitigation |
 |---|---|---|---|---|
 | R0.1 | **Audit the Netlify setup** | Config is invisible to the repo | Record build command, publish dir, Node version, production branch, deploy-preview setting, domain. Put it in the guide. | none |
-| R0.2 | **Add `netlify.toml`** | Settings versioned with the code; tests gate every deploy | See §11.1. Build command `npm test && npm run build`. | It overrides dashboard settings → do R0.1 first and compare; ship in its own PR with a Deploy Preview |
-| R0.3 | **Security & cache headers** | Safe defaults, fast repeat visits | `[[headers]]` in `netlify.toml` (§11.1) | A strict CSP can break the page → test on the preview; CSP in its own commit so it's easy to revert |
-| R0.4 | **Self-host fonts** (U12) | Removes the render-blocking request and the Google dependency; lets CSP be strict | `@fontsource/manrope` + `@fontsource/dm-mono` (only the weights used: 400/500, 400–800), imported in `main.tsx`; remove the `@import` | +2 build-time dependencies; ~font file size → subset to Latin, check bundle |
+| R0.2 | **Add `netlify.toml`** | Settings versioned with the code; tests gate every deploy | See §12.1. Build command `npm test && npm run build`. | It overrides dashboard settings → do R0.1 first and compare; ship in its own PR with a Deploy Preview |
+| R0.3 | **Security & cache headers** | Safe defaults, fast repeat visits | `[[headers]]` in `netlify.toml` (§12.1) | A strict CSP can break the page → test on the preview; CSP in its own commit so it's easy to revert |
+| R0.4 | **Right-sized, self-hosted fonts** (U12, E4, P3) | Removes the render-blocking Google request chain; lets CSP be strict; ≈ 39 kB total | `@fontsource-variable/manrope` + `@fontsource/dm-mono`, **only what is used** (Manrope variable, DM Mono 400), Latin subset, `font-display: swap`, preload the first-screen files; remove the `@import` | Reflow on swap → check CLS ≤ 0.1; +2 build-time dependencies |
 | R0.5 | **Auto-pause when the tab is hidden or the window loses focus** (U1) | A run shouldn't end because you looked away. Fairness first. | Shell listens to `visibilitychange` and `blur`, dispatches the existing `pause` event. **Never auto-resume**; the player resumes. | False pauses (e.g. DevTools) → acceptable, since typing wouldn't register anyway; verify iOS Safari doesn't pause on keyboard open |
 | R0.6 | **Identity assets** (U11) | First impression and link previews | Favicon (SVG), `og:title/description/image` (1200×630 monochrome card), `theme-color` already present | OG image must not misrepresent the game → generate from the real UI |
-| R0.7 | **Privacy-friendly measurement** (§12) | Can't improve engagement without a baseline | Cookieless analytics + a few aggregate events | Privacy/compliance → no cookies, no personal data, no typed content; disclose in footer; verify local rules |
-| R0.8 | **Bundle budget** | Prevent silent bloat | Record current size (**73 kB gzipped JS**); proposed budget 85 kB; checked in each release | none |
+| R0.7 | **Privacy-friendly measurement** (§13) | Can't improve engagement without a baseline | Cookieless analytics + a few aggregate events | Privacy/compliance → no cookies, no personal data, no typed content; disclose in footer; verify local rules |
+| R0.8 | **Size budgets in CI** (P2) | Prevent silent bloat | Record current size (**72.1 kB gzipped JS**); zero-dependency script fails CI over the §4.2 budgets | Flaky limits → ~15% headroom |
+| R0.9 | **Performance baseline + dev HUD** (P1, P8) | Real numbers before any optimisation | Lighthouse mobile run, DevTools trace on a mid-range Android, 10-minute heap check; dev-only `?perf` HUD; record results in §4.1 | HUD must not ship → build-size diff 0 bytes |
+| R0.10 | **Monotonic clock** (E3, P6) | A system clock change shouldn't drain survival | One `now()` helper using `performance.now()` | none (engine already takes `now`) |
+| R0.11 | **Delivery checks** (P11) | Free speed | Verify gzip/brotli, immutable assets, no third-party requests | none |
 
-**Done when:** Netlify deploy fails if tests fail (proven with a deliberately failing test on a preview branch); headers verified in the browser; switching tabs mid-run pauses; favicon and preview card show; analytics shows a page view; fonts load from the site itself.
+**Done when:** Netlify deploy fails if tests fail (proven with a deliberately failing test on a preview branch); headers verified in the browser; switching tabs mid-run pauses; favicon and preview card show; analytics shows a page view; fonts load from the site itself; baseline numbers are recorded in §4.1; CI fails when a budget is exceeded; no third-party font requests remain.
 
 ---
 
-## 5. R1 · v0.3.0 Typing Impact
+## 6. R1 · v0.3.0 Typing Impact
 
 Fully planned in **guide §9 · Phase 2A** (feedback ladder, sound synthesis, safeguards, build order). Not repeated here. Items added by this plan:
 
 | Addition | Reason |
 |---|---|
+| **Step 0: render pipeline** (P4, P5) | Stop re-rendering the React tree 20×/s and move the meter to `transform`. Do it **before** the effects, so they run on a cheap frame. +1.5 days. |
 | **Fade the COMBO number as its window closes** (U6) | Makes the invisible 3 s window visible without adding an element (G2). Uses `engine.comboTimer`. Do it in 2A step 4. |
-| **Sound default decision** (§14) | Most of the impact is audio |
+| **Sound default decision** (§15) | Most of the impact is audio |
 | Effects respect **R0.5 auto-pause** | No effects keep firing while paused |
 
 ---
 
-## 6. R2 · v0.4.0 Run Experience
+## 7. R2 · v0.4.0 Run Experience
 
 **Goal:** a run ends with a clear, kind result and a one-key way to go again. This is the strongest "one more run" lever that fits ICA.
 
-### 6.1 Items
+### 7.1 Items
 
 | # | Task | UX / engagement value | Approach | Risk → mitigation |
 |---|---|---|---|---|
@@ -171,11 +278,13 @@ Fully planned in **guide §9 · Phase 2A** (feedback ladder, sound synthesis, sa
 | R2.5 | **Readability pass** (U2) | The core text is hard to read | Raise colours, keep the hierarchy: untyped letters `#555 → #666+` (≥3:1, large text); small labels to `#7a7a7a` (4.6:1, AA); minimum label size 11 px (mobile too) | Loses the "quiet" look → change values only, not layout; compare before/after screenshots; keep typed vs untyped contrast obvious |
 | R2.6 | **One-line rules hint** (U7) | New players understand what's going on | One muted line on the ready screen: *"Finish each word before the line runs out. Mistakes cost time."* | Clutter → one line, no tutorial or modal (G1) |
 | R2.7 | **Length-scaled survival** (U8) | Fair difficulty at every level | Engine: per-word refill `base + perLetter × length`. Starting guess: ~2.0 s + 0.3 s/letter (4 letters ≈ 3.2 s, 15 ≈ 6.5 s). Meter width = time ÷ that word's capacity. | Feels different to returning players → tune with 5–10 playtesters watching where runs end; unit tests pin the formula; note bests set under v0.3 rules in the changelog |
-| R2.8 | **Mobile input** (U10) | Phone players can start typing at all | A visible "tap to type" area; focus the input **synchronously inside the tap**; `100dvh` layout so the word stays above the on-screen keyboard | Can't be verified without devices → test iOS Safari + Android Chrome via **Deploy Preview URL** before release; fallback = tap area re-focuses on every tap |
+| R2.8 | **Mobile input** (U10) | Phone players can start typing at all | A visible "tap to type" area; focus the input **synchronously inside the tap**; `100dvh` layout so the word stays above the on-screen keyboard; input `font-size ≥ 16 px`, `autoCorrect="off"`, `touch-action: manipulation` (§4.4) | Can't be verified without devices → test iOS Safari + Android Chrome via **Deploy Preview URL** before release; fallback = tap area re-focuses on every tap |
 | R2.9 | **Screen-reader & focus basics** | G6 | Word announced via a polite `aria-live` region on change (not per keystroke); visible focus outlines | Chatty announcements → announce word change only |
 | R2.10 | **E2E smoke test** | Catches wiring bugs unit tests can't | One Playwright test: start, type a word, WORDS = 1 (dev dependency only) | Flaky tests → drive time via the engine, keep the test short; if it flakes, quarantine, don't ignore |
+| R2.11 | **Fit long words on narrow phones** (U15) | Level-4 words stay fully visible on 320–360 px screens | Size the word from its length in CSS (§4.4) | Smaller letters → keep a readable floor; verify the four 16-letter words |
+| R2.12 | **Touch targets** (U16) and iOS input quirks (§4.4) | Easier taps, no focus-zoom | ≥ 44 px hit areas without visual change; input attributes | Verify on real devices |
 
-### 6.2 Code changes
+### 7.2 Code changes
 
 | Area | Change |
 |---|---|
@@ -185,15 +294,15 @@ Fully planned in **guide §9 · Phase 2A** (feedback ladder, sound synthesis, sa
 | `styles.css` | Contrast values, min sizes, tap area |
 | `App.tsx` | Key handling for paused / game over, input lock |
 
-**Done when:** result screen shows all figures with a "new best" case tested; replay is one key press and the lock prevents accidental skips; contrast ≥ targets (re-measured); a full run works on one iPhone and one Android phone; E2E passes in CI; all unit tests pass.
+**Done when:** result screen shows all figures with a "new best" case tested; replay is one key press and the lock prevents accidental skips; contrast ≥ targets (re-measured); a full run works on one iPhone and one Android phone; E2E passes in CI; all unit tests pass; the four 16-letter words are fully visible at 320 and 360 px.
 
 ---
 
-## 7. R3 · v0.5.0 Content & Variety
+## 8. R3 · v0.5.0 Content & Variety
 
 **Goal:** a run stays fresh, and the game's tone is deliberate.
 
-### 7.1 Larger word pools (U9)
+### 8.1 Larger word pools (U9)
 
 | Item | Detail |
 |---|---|
@@ -202,11 +311,11 @@ Fully planned in **guide §9 · Phase 2A** (feedback ladder, sound synthesis, sa
 | Quality | Hand-curated, no offensive or ambiguous words; common words dominate; spelling unambiguous (no US/UK variants) |
 | Risk | Content errors slip in → add a test for the rules above, and review the diff by eye. Don't generate lists from an uncurated dictionary. |
 
-### 7.2 Tone decision (U13)
+### 8.2 Tone decision (U13)
 
 Decide whether the slang words (`rizz`, `yeet`, `simp`, `noob` …) fit the brand. Options: **keep** (playful), **move to a separate "playful" pool** (e.g. mixed in at lower probability), or **remove** (fully calm). Recommendation: keep a small amount, since it gives the game personality, but make this an explicit choice. Ask the owner before changing.
 
-### 7.3 Calm mode (decision gate)
+### 8.3 Calm mode (decision gate)
 
 The footer promises "type at your own pace", while the survival meter forces one. An optional **Calm** mode would honour the promise: no drain, no game over, the same word flow, feedback and combo rhythm; the player ends the session.
 
@@ -220,7 +329,7 @@ The footer promises "type at your own pace", while the survival meter forces one
 
 ---
 
-## 8. R4 · v0.6.0 Return Loops (optional)
+## 9. R4 · v0.6.0 Return Loops (optional)
 
 **Goal:** give players reasons to return *by choice*. Every item is optional, local, and can be ignored (G3, G4).
 
@@ -235,14 +344,14 @@ The footer promises "type at your own pace", while the survival meter forces one
 
 ---
 
-## 9. R5 · v1.0.0 Launch
+## 10. R5 · v1.0.0 Launch
 
 | Task | Detail |
 |---|---|
 | **Custom domain** | Netlify → Domain management. Use a CNAME/ALIAS or Netlify DNS; HTTPS certificate is automatic. Set one primary domain and redirect the others. |
 | **Update CSP/OG URLs** | Absolute URLs for the new domain |
-| **Accessibility audit** | Keyboard-only run; screen reader pass; reduced motion; contrast re-measure; Lighthouse accessibility ≥ 90 as a target |
-| **Performance audit** | Lighthouse performance on a throttled mobile profile; bundle within budget |
+| **Accessibility audit** | Keyboard-only run; screen reader pass; reduced motion; contrast re-measure; 200% zoom and landscape phone (U17); Lighthouse accessibility ≥ 90 as a target |
+| **Performance audit** | Lighthouse mobile ≥ 90 against the §4.2 budgets (LCP ≤ 2.5 s, CLS ≤ 0.1, INP ≤ 200 ms); 10-minute heap check; third-party requests = 0 apart from analytics |
 | **Cross-browser check** | Chrome, Firefox, Safari (macOS + iOS), Android Chrome |
 | **Installable (optional)** | Web manifest + icons. An offline service worker only if wanted, and only with auto-update, since a stale cached build is the main risk |
 | **Release** | Changelog, `1.0.0`, tag, announce |
@@ -251,7 +360,7 @@ The footer promises "type at your own pace", while the survival meter forces one
 
 ---
 
-## 10. R6 · Online Features (gated)
+## 11. R6 · Online Features (gated)
 
 **Only if** R4 data shows people return and ask for it. Requires an explicit go decision and breaks G3 *unless built as optional*.
 
@@ -265,9 +374,9 @@ The footer promises "type at your own pace", while the survival meter forces one
 
 ---
 
-## 11. Netlify Operations
+## 12. Netlify Operations
 
-### 11.1 Proposed `netlify.toml` (R0.2/R0.3, **not yet applied**)
+### 12.1 Proposed `netlify.toml` (R0.2/R0.3, **not yet applied**)
 
 ```toml
 [build]
@@ -297,7 +406,7 @@ Notes:
 - `index.html` must **not** be cached long-term, so new releases show up: Netlify's default for HTML revalidates; keep it that way.
 - Validate on a **Deploy Preview** before merging.
 
-### 11.2 What Netlify gives us, and how it's used
+### 12.2 What Netlify gives us, and how it's used
 
 | Feature | Use |
 |---|---|
@@ -307,7 +416,7 @@ Notes:
 | **Build env vars** | Feature flags (e.g. `VITE_ENABLE_DAILY`) to ship dark and switch on |
 | **Functions / Blobs** | Only for R6 |
 
-### 11.3 Release flow
+### 12.3 Release flow
 
 ```
 feature branch ─▶ PR ─▶ GitHub CI (test+build) ─┬─▶ Netlify Deploy Preview ─▶ manual check (desktop + phone)
@@ -315,20 +424,21 @@ feature branch ─▶ PR ─▶ GitHub CI (test+build) ─┬─▶ Netlify Depl
                                                                                   └─ tag vX.Y.Z · changelog · (rollback if needed)
 ```
 
-### 11.4 Per-release checklist
+### 12.4 Per-release checklist
 
 - [ ] Tests, build and CI green; Deploy Preview works
 - [ ] Full run on desktop with keyboard only
 - [ ] Full run on one iPhone and one Android phone (Preview URL)
 - [ ] Reduced-motion on: no shake/kick
 - [ ] Contrast re-measured for any colour change
-- [ ] Bundle size within budget
+- [ ] Budgets met (CI size script); Lighthouse mobile re-run; third-party requests = 0
+- [ ] Idle render rate and long tasks checked in the dev HUD (from R1)
 - [ ] Changelog + version + tag
 - [ ] Rollback target noted (previous deploy)
 
 ---
 
-## 12. Measuring Engagement
+## 13. Measuring Engagement
 
 Without numbers, "engagement" is opinion. Aim for a **baseline within two weeks** of R0, and set targets only after that. Don't invent targets beforehand.
 
@@ -341,18 +451,18 @@ Without numbers, "engagement" is opinion. Aim for a **baseline within two weeks*
 | Return visits (weekly) | Whether R3/R4 pull people back |
 | Desktop vs mobile split and completion | Mobile problems (R2.8) |
 
-**Tooling criteria:** cookieless, no personal data, aggregate counts, supports a few custom events, small script, acceptable cost. Netlify's built-in analytics is a paid add-on and server-side, so it has no custom events; a lightweight cookieless tool (e.g. Plausible, GoatCounter or Cloudflare Web Analytics, **verify current terms**) fits better. **Never** send typed text, and keep event names generic (`run_end` with level reached, words).
+**Tooling criteria:** cookieless, no personal data, aggregate counts, supports a few custom events, small script, acceptable cost. Netlify's built-in analytics is a paid add-on and server-side, so it has no custom events; a lightweight cookieless tool (e.g. Plausible, GoatCounter or Cloudflare Web Analytics, **verify current terms**) fits better. **Never** send typed text, and keep event names generic (`run_end` with level reached, words). Optionally, real-user Core Web Vitals via the small `web-vitals` library if the tool accepts custom events (check its size first); otherwise lab measurements (Lighthouse, §4.2) are enough.
 
 ---
 
-## 13. Risk Register
+## 14. Risk Register
 
 *Likelihood/impact are my estimates, not measured.*
 
 | # | Risk | L / I | Mitigation | Where |
 |---|---|---|---|---|
 | 1 | **Identity drift:** features pile up and the game stops being quiet | M / **H** | Guardrails (§1.1), filter (§1.2), one-new-element budget, review every PR against them | All releases |
-| 2 | **Bad deploy reaches players** | M / H | Tests in the Netlify build, Deploy Previews, small releases, instant rollback | R0.2, §11 |
+| 2 | **Bad deploy reaches players** | M / H | Tests in the Netlify build, Deploy Previews, small releases, instant rollback | R0.2, §12 |
 | 3 | **Stale app cached** after a release | L / M | Immutable hashed assets, HTML revalidates, no service worker unless needed (and then auto-update) | R0.3, R5 |
 | 4 | **CSP breaks the site** | M / M | Test on preview; separate commit; fonts self-hosted first | R0.3, R0.4 |
 | 5 | **Effects tire or sicken players** | M / H | Phase 2A safeguards: damping, budget, perf guard, reduced-motion, flash limits | R1 |
@@ -360,18 +470,25 @@ Without numbers, "engagement" is opinion. Aim for a **baseline within two weeks*
 | 7 | **Balance change alienates players** | M / M | Tested formula, playtest observation, changelog note | R2.7 |
 | 8 | **Local data corrupt or blocked** | M / L | Versioned, validated, guarded storage; falls back to zeros | R2.4 |
 | 9 | **Daily seed mismatch** between versions | M / M | `WORD_LIST_VERSION` in seed; pinned-sequence test | R4.1 |
-| 10 | **Guilt-driven engagement creeps in** (streaks, reminders) | L / H | Explicitly rejected (§15) | R4 |
+| 10 | **Guilt-driven engagement creeps in** (streaks, reminders) | L / H | Explicitly rejected (§16) | R4 |
 | 11 | **Mobile keyboard fails** on iOS/Android | **H** (unverified) / H | Real-device tests on every release; tap-to-type fallback | R2.8 |
-| 12 | **Accessibility regression** | M / M | Per-release checklist; contrast re-measured; reduced motion | §11.4 |
+| 12 | **Accessibility regression** | M / M | Per-release checklist; contrast re-measured; reduced motion | §12.4 |
 | 13 | **Analytics privacy/compliance** | L / M | Cookieless, no personal data, disclosed; verify regional rules | R0.7 |
 | 14 | **Dependency/bundle bloat** | M / M | Runtime deps stay React only; fonts and test tools are the only additions; size budget | R0.8 |
 | 15 | **Leaderboard cheating or backend cost** | M / M | Replay validation, optional + flagged, limits and alerts | R6 |
-| 16 | **Scope creep and overrun** | **H** / M | Time-box per release; unfinished work moves or drops; "Not planned" list | §3.1, §15 |
+| 16 | **Scope creep and overrun** | **H** / M | Time-box per release; unfinished work moves or drops; "Not planned" list | §3.1, §16 |
 | 17 | **Unverified assumptions about the Netlify setup** | M / M | R0.1 audit first; nothing in `netlify.toml` applied before it | R0.1 |
+| 18 | **Premature optimisation / complexity creep** | M / M | Measure-first rule; every change needs a before/after number; P4 time-boxed to ~1.5 days | §4.6 |
+| 19 | **Render-pipeline rework changes core-loop timing** | M / **H** | Engine stays the only authority; every dispatch re-syncs; `nextDeadline` unit-tested incl. pause; old-vs-new equivalence test; E2E | P4 |
+| 20 | **Framework swap (Preact) behaves differently** | L / M | Gated by data; E2E on three browsers and a real phone; Netlify rollback | P10 |
+| 21 | **Font change causes reflow or invisible text** | M / M | `swap`, preload first-screen fonts, CLS ≤ 0.1 check | P3 |
+| 22 | **Performance regresses over time** | M / M | CI size budgets, dev HUD, Lighthouse each release | P2, §12.4 |
+| 23 | **Performance work eats the polish schedule** | M / M | Effort already added to R0/R1/R2/R5 (§4.5); gated items only on "go" | §4.5 |
+| 24 | **Long words stay unreadable on small phones** | **H** (computed) / M | CSS sizing from word length; check at 320/360 px before each release | U15, R2.11 |
 
 ---
 
-## 14. Decisions Needed
+## 15. Decisions Needed
 
 | # | Decision | Options | Recommendation | Needed by |
 |---|---|---|---|---|
@@ -384,10 +501,12 @@ Without numbers, "engagement" is opinion. Aim for a **baseline within two weeks*
 | D7 | Custom domain name | — | Owner's choice | R5 |
 | D8 | Online features | Never / only on demand | Only on demand | After R5 |
 | D9 | Purge `ICA.zip` (17 MB) from git history | Keep / purge with force-push | Purge before others clone | Any time |
+| D10 | Swap React for Preact | No / yes | **No by default**; decide from the P1 real-device numbers | After R0 |
+| D11 | Static first-paint shell for the ready screen (P9) | No / yes | Only if LCP > 2.5 s after fonts are fixed | After R0 |
 
 ---
 
-## 15. Not Planned
+## 16. Not Planned
 
 Rejected because they conflict with the guardrails.
 

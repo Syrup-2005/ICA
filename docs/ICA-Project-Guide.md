@@ -448,6 +448,7 @@ Both are saved via `storage.ts` and shown in the top bar.
 
 | Step | Work | Done when |
 |---|---|---|
+| 0 | **Render pipeline first** ([`IMPROVEMENT-PLAN.md`](./IMPROVEMENT-PLAN.md) §4, P4–P5): stop 20 Hz React renders; meter on `transform` | Idle renders ≈ 0/s; meter still smooth |
 | 1 | Move effects before paint; measure latency | Performance trace shows key → sound/visual within one frame |
 | 2 | Sound voices, voice limit, compressor | Fast typing (100+ WPM burst) sounds smooth, with no clipping |
 | 3 | Letter press, wrong-letter ghost, word transition | No visible input delay; untyped letters never move |
@@ -516,7 +517,7 @@ ICA is deployed on **Netlify**. The dashboard settings (build command, publish d
 
 ### 10.3 Configuration (planned)
 
-Build settings, test gating, cache and security headers move into a versioned `netlify.toml`. The proposed file, ordering constraints (audit first, fonts self-hosted before CSP) and rollout are in [`IMPROVEMENT-PLAN.md` §11](./IMPROVEMENT-PLAN.md). **Not applied yet.**
+Build settings, test gating, cache and security headers move into a versioned `netlify.toml`. The proposed file, ordering constraints (audit first, fonts self-hosted before CSP) and rollout are in [`IMPROVEMENT-PLAN.md` §12](./IMPROVEMENT-PLAN.md). **Not applied yet.**
 
 ### 10.4 CI (in place)
 `.github/workflows/ci.yml` runs `npm ci → npm test → npm run build` on every push to `main` and every PR. Turn on GitHub branch protection for `main` and require this check.

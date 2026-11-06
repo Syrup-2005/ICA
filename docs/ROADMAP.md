@@ -21,12 +21,12 @@
 | Release | Version | Theme | Effort | Status |
 |---|---|---|---|---|
 | Phase 0 + 1 | 0.2.0 | Working build, clean architecture, 30 tests, CI | done | ✅ Merged (PR #1), live on Netlify |
-| **R0** | 0.2.1 | Netlify hardening, fonts, auto-pause, identity assets, measurement | ~1.5 days | ▶ **Next** |
-| **R1** | 0.3.0 | Typing impact: weighty keystrokes (guide §9 · Phase 2A) | ~5 days | Planned |
-| **R2** | 0.4.0 | Result screen, instant replay, readability, balance, mobile | ~5 days | Planned |
+| **R0** | 0.2.1 | Netlify hardening, right-sized fonts, auto-pause, identity assets, measurement, size budgets | ~2 days | ▶ **Next** |
+| **R1** | 0.3.0 | Render pipeline first, then typing impact: weighty keystrokes (guide §9 · Phase 2A) | ~6.5 days | Planned |
+| **R2** | 0.4.0 | Result screen, instant replay, readability, balance, mobile, small-screen fit | ~5.5 days | Planned |
 | **R3** | 0.5.0 | Bigger vocabulary, tone decision, calm-mode gate | ~3 days | Planned |
 | **R4** | 0.6.0 | Daily run, share, local stats (optional) | ~4 days | Planned |
-| **R5** | 1.0.0 | Custom domain, audits, launch | ~2 days | Planned |
+| **R5** | 1.0.0 | Custom domain, audits, launch | ~2.5 days | Planned |
 | **R6** | 1.x | Online features | TBD | Gated |
 
 *Estimates are rough, for one developer, and each release is time-boxed.*
@@ -40,7 +40,8 @@
 | Build / tests / CI | ✅ passes · 30 unit tests · GitHub Actions on every push/PR |
 | Architecture | ✅ Pure engine (`src/game/`), hooks, screen components |
 | Hosting | ✅ Netlify (settings not yet in the repo: no `netlify.toml`) |
-| Not yet known | ❓ Real-phone behaviour, Safari/Firefox, Netlify dashboard settings |
+| Size | JS 72.1 kB gzip, of which React is 67.5 kB; ICA's own code ≈ 4.6 kB |
+| Not yet known | ❓ Runtime performance (Lighthouse, frame rate), real-phone behaviour, Safari/Firefox, Netlify dashboard settings |
 
 ---
 
@@ -48,9 +49,9 @@
 
 | Release | Player sees | Behind the scenes |
 |---|---|---|
-| **R0** | Run no longer lost by switching tabs; favicon and link preview; faster first load | Tests gate every deploy, security/cache headers, self-hosted fonts, privacy-friendly analytics |
-| **R1** | Keystrokes with weight: "thock", letters that press, rising combo pitch, danger pulse | Sound synthesis, effect budget, performance guard, reduced-motion support |
-| **R2** | Result screen with WPM, accuracy and "new best"; replay in one key; readable text; fair difficulty; works on phones | Length-scaled survival, versioned local stats, contrast fixes, E2E test |
+| **R0** | Run no longer lost by switching tabs; favicon and link preview; faster first load (≈ 39 kB of self-hosted fonts instead of a third-party chain) | Tests gate every deploy, security/cache headers, CI size budgets, performance baseline, privacy-friendly analytics |
+| **R1** | Keystrokes with weight: "thock", letters that press, rising combo pitch, danger pulse | Idle React rendering ≈ 0/s instead of 20/s, compositor-driven meter, sound synthesis, effect budget, performance guard, reduced-motion support |
+| **R2** | Result screen with WPM, accuracy and "new best"; replay in one key; readable text; fair difficulty; works on phones, long words fit small screens | Length-scaled survival, versioned local stats, contrast fixes, E2E test |
 | **R3** | Fresher words in long runs; deliberate tone; optional calm mode (if approved) | Curated word pools with enforced rules |
 | **R4** | Optional daily run, shareable result, lifetime stats | Seeded daily word sequence (no backend) |
 | **R5** | ICA on its own domain | Audits (accessibility, performance, browsers) |
@@ -60,8 +61,9 @@
 
 ## 4. Guardrails (apply to everything)
 
-Quiet · one word, minimal screen · playable with no account or network · the player's own pace · instant · accessible.
-Full list, feature filter and "not planned" items: [`IMPROVEMENT-PLAN.md` §1 and §15](./IMPROVEMENT-PLAN.md).
+Quiet · one word, minimal screen · playable with no account or network · the player's own pace · instant · accessible · light and smooth.
+Performance baseline, budgets and tasks: [`IMPROVEMENT-PLAN.md` §4](./IMPROVEMENT-PLAN.md).
+Full list, feature filter and "not planned" items: [`IMPROVEMENT-PLAN.md` §1 and §16](./IMPROVEMENT-PLAN.md).
 
 ---
 
@@ -79,7 +81,7 @@ Full list, feature filter and "not planned" items: [`IMPROVEMENT-PLAN.md` §1 an
 
 ## 6. Open Decisions
 
-Full table (with options and recommendations): [`IMPROVEMENT-PLAN.md` §14](./IMPROVEMENT-PLAN.md).
+Full table (with options and recommendations): [`IMPROVEMENT-PLAN.md` §15](./IMPROVEMENT-PLAN.md).
 
 | Decision | Needed by |
 |---|---|
@@ -87,6 +89,7 @@ Full table (with options and recommendations): [`IMPROVEMENT-PLAN.md` §14](./IM
 | Sound default (recommended: low, from the first key press) | R1 |
 | Analytics tool (cookieless) or none | R0 |
 | Keep or change the slang words | R3 |
+| Swap React for Preact (recommended: no, unless the baseline misses the budgets) | after R0 |
 | Calm mode: build or skip | R3 gate |
 | Custom domain name | R5 |
 
