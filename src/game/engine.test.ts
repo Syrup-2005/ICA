@@ -6,6 +6,7 @@ import {
   createInitialState,
   gameReducer,
   getAccuracy,
+  nextDeadline,
   type GameEvent,
   type GameState,
 } from './engine'
@@ -174,5 +175,71 @@ describe('time', () => {
     const paused = run(started(), { type: 'pause', now: T0 })
     expect(run(paused, { type: 'tick', now: T0 + 99_999 })).toBe(paused)
     expect(run(paused, { type: 'input', value: 'a', now: T0 + 1 })).toBe(paused)
+  })
+})
+
+describe('feedback details for the UI', () => {
+  it('records the rejected letter', () => {
+    const s0 = started()
+    const wrong = wrongLetter(s0)
+    expect(run(s0, { type: 'input', value: wrong, now: T0 }).wrongLetter).toBe(wrong)
+  })
+
+  it('records the completed word', () => {
+    const s0 = started()
+    expect(typeWord(s0, T0).lastWord).toBe(s0.word)
+  })
+
+  it('counts a combo break exactly once, when a live combo expires', () => {
+    const s1 = typeWord(started(), T0)
+    const broken = run(s1, { type: 'tick', now: T0 + COMBO_WINDOW })
+    expect(broken.comboBreakId).toBe(1)
+    expect(run(broken, { type: 'tick', now: T0 + COMBO_WINDOW + 500 }).comboBreakId).toBe(1)
+  })
+
+  it('does not count a break when there was no combo', () => {
+    expect(run(started(), { type: 'tick', now: T0 + 1000 }).comboBreakId).toBe(0)
+  })
+
+  it('counts a break that happens just before a keystroke (break + new combo in one event)', () => {
+    const s1 = typeWord(started(), T0)
+    const s2 = typeWord(s1, T0 + COMBO_WINDOW + 10)
+    expect(s2.comboBreakId).toBe(1)
+    expect(s2.combo).toBe(1)
+  })
+})
+
+describe('nextDeadline (replaces 50 ms polling)', () => {
+  it('is the survival time left when no combo is active', () => {
+    expect(nextDeadline(started())).toBe(MAX_HEALTH)
+  })
+
+  it('is the earlier of survival and the combo window', () => {
+    const s1 = run(typeWord(started(), T0), { type: 'tick', now: T0 + 500 })
+    expect(nextDeadline(s1)).toBe(COMBO_WINDOW - 500)
+  })
+
+  it('is null while not playing', () => {
+    expect(nextDeadline(createInitialState())).toBeNull()
+    expect(nextDeadline(run(started(), { type: 'pause', now: T0 }))).toBeNull()
+  })
+
+  it('ends an idle run at exactly the same moment and state as 50 ms polling', () => {
+    // Polling: tick every 50 ms until game over.
+    let polled = typeWord(started(), T0)
+    for (let t = T0 + 50; polled.screen === 'playing'; t += 50) polled = gameReducer(polled, { type: 'tick', now: t })
+
+    // Deadline scheduling: tick only when nextDeadline says something happens.
+    let scheduled = typeWord(started(), T0)
+    let ticks = 0
+    while (scheduled.screen === 'playing') {
+      const at = scheduled.lastTickAt! + nextDeadline(scheduled)!
+      scheduled = gameReducer(scheduled, { type: 'tick', now: at })
+      ticks++
+    }
+
+    expect(scheduled).toEqual(polled)
+    expect(scheduled.elapsed).toBe(MAX_HEALTH)
+    expect(ticks).toBe(2) // combo expiry, then survival running out (vs 100 polling ticks)
   })
 })
