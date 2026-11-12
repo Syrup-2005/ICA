@@ -3,6 +3,27 @@
 All notable changes to ICA are recorded here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+**Polish: calmer feel, Zen mode, run results** (add-ons A1, A2, A5 and R2.1–R2.3, plus parts of R2.4/R2.5/R2.6/R2.11/R2.12).
+
+### Added
+- **Zen mode** (choose ARCADE or ZEN on the start screen): no timer, no failure, endless. Mistakes cost nothing and quietly reset the streak; words stay at comfortable lengths (3–8 letters). Pause with Esc, stop any time with END (top bar) or END SESSION (pause screen). A soft synthesised ambient pad plays while a session runs (toggle on the start screen; fades out on pause and end).
+- **Typing rhythm line** (A5, Zen): a thin line under the word widens as the gaps between your keystrokes even out (steady / settling / finding). Pauses to think start a new phrase rather than counting against you. Drawn by the 20 Hz display tick, no animations.
+- **Key sound choice** (A2), on the start screen before you play: SOFT (muted, cushioned), THOCK (deep mechanical), WOOD (warm block), PEBBLE (small glassy click). Picking one plays a short preview. Keyboard: ← → mode, ↑ ↓ sound.
+- **Result screen** (R2.1): words, best combo (Zen: longest streak), accuracy, time, WPM (— for runs under 5 s), plus "New best." or "N words from your best". Arcade bests are saved as versioned `ica-stats` (validated and clamped on read).
+- **Instant replay** (R2.2): Enter/Space plays again (same mode), after a 0.7 s lock so a fast typist can't skip the result by accident. Esc goes to the menu.
+
+### Changed
+- **Words are shown as keycaps:** typed keys sit pressed in and lit, the next key is outlined. Cell size follows word length, so 16-letter words fit a 320 px screen (R2.11).
+- **Calmer sounds:** combo notes climb a major pentatonic scale over two octaves (was semitones), a small synthesised room adds space, the combo break is a soft falling pair of notes, and the milestone chime rings longer. In Zen a wrong key is a soft tap with no shake.
+- **Sound on by default at LOW** (A1 / decision D2) for new players; a saved choice, including a v0.2 "off", is kept.
+- Readability (R2.5): small labels and footers raised to `#6a6a6a`–`#8a8a8a` and 10 px minimum; buttons ≥ 44 px tall (R2.12); input `autoCorrect="off"` and 16 px (no iOS focus zoom); `100dvh` layout.
+- Esc/Enter resume (R2.3) also covers Zen; it was already done for Arcade in R0.
+
+### Size and tests
+- JS 75.8 → 79.9 KiB gzip (budget 85). Tests 57 → 78.
+
 ## [0.3.0] — 2026-11-06
 
 **R1 "Typing Impact"** (guide §9 · Phase 2A; status and measurements in `docs/IMPROVEMENT-PLAN.md` §6.1). Game rules are unchanged.

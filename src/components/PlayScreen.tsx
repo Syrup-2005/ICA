@@ -2,9 +2,11 @@ import { useLayoutEffect, useRef, type RefObject } from 'react'
 import { COMBO_WINDOW, MAX_HEALTH, getAccuracy, type GameState } from '../game/engine'
 import { getDifficulty } from '../game/words'
 import { now } from '../clock'
+import { formatTime } from '../format'
 import { FEEL } from '../feel/config'
 import type { FeelRefs } from '../feel/useFeel'
 import { Stat } from './Stat'
+import { WordDisplay } from './WordDisplay'
 
 interface PlayScreenProps {
   state: GameState
@@ -19,17 +21,12 @@ const COMBO_MIN_OPACITY = 0.55
 // Update rate for time-driven readouts (same 20 Hz as v0.2, without the React re-render).
 const DISPLAY_TICK_MS = 50
 
-function formatTime(ms: number): string {
-  const seconds = Math.floor(ms / 1000)
-  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
-}
-
 function setText(el: HTMLElement | null, text: string): void {
   if (el && el.textContent !== text) el.textContent = text
 }
 
 export function PlayScreen({ state, inputRef, feelRefs, pulse, onInput }: PlayScreenProps) {
-  const { word, typed, combo, bestCombo, wordsCompleted, feedback, feedbackId, wrongLetter, lastWord } = state
+  const { word, typed, combo, bestCombo, wordsCompleted } = state
   const timeRef = useRef<HTMLElement>(null)
   const survivalRef = useRef<HTMLElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
@@ -74,8 +71,6 @@ export function PlayScreen({ state, inputRef, feelRefs, pulse, onInput }: PlaySc
     return () => window.clearTimeout(id)
   }, [survivalEndsAt, comboEndsAt, runStartedAt, feelRefs, pulse])
 
-  const remaining = word.slice(typed.length)
-
   return (
     <>
       <section className="stats-row" aria-label="Game statistics">
@@ -86,22 +81,7 @@ export function PlayScreen({ state, inputRef, feelRefs, pulse, onInput }: PlaySc
       </section>
       <section className="center-stage game-stage">
         <p className="eyebrow">LEVEL {getDifficulty(wordsCompleted)} <span className="dot">·</span> ENDLESS</p>
-        <div className="word-display" aria-hidden="true" ref={feelRefs.stage}>
-          {feedback === 'complete' && lastWord && (
-            <span key={`out-${wordsCompleted}`} className="word-out">{lastWord}</span>
-          )}
-          <span key={`word-${wordsCompleted}`} className="word-current">
-            <span className="typed-text">{typed.slice(0, -1)}</span>
-            {typed && <span key={`press-${typed.length}`} className="typed-text press">{typed.slice(-1)}</span>}
-            <span className="remaining-text slot">
-              {remaining.slice(0, 1)}
-              {feedback === 'wrong' && wrongLetter && (
-                <span key={`ghost-${feedbackId}`} className="ghost">{wrongLetter}</span>
-              )}
-            </span>
-            <span className="remaining-text">{remaining.slice(1)}</span>
-          </span>
-        </div>
+        <WordDisplay state={state} stageRef={feelRefs.stage} />
         <p className="typing-hint">TYPE THE WORD</p>
         <input
           ref={inputRef}
@@ -110,6 +90,7 @@ export function PlayScreen({ state, inputRef, feelRefs, pulse, onInput }: PlaySc
           onChange={(event) => onInput(event.target.value)}
           autoComplete="off"
           autoCapitalize="off"
+          autoCorrect="off"
           spellCheck={false}
           aria-label={`Type the word ${word}`}
           autoFocus

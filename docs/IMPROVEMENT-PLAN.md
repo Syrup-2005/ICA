@@ -336,7 +336,9 @@ OFF matches v0.2.1. FULL and SUBTLE add at most one 8 ms step at the median and 
 
 ### 6.3 Proposed add-ons (for discussion, not built)
 
-Ideas that came up during R1. **None is implemented.** Each needs your go-ahead, and each is checked against the guardrails (§1.1).
+Ideas that came up during R1. Each is checked against the guardrails (§1.1).
+
+**Status (polish phase, see CHANGELOG [Unreleased]):** A1 ✅ (LOW by default for new players) · A2 ✅ (SOFT / THOCK / WOOD / PEBBLE, chosen on the start screen with a preview) · A3 → folded into **Zen mode** (no live score; stats on the result screen) · A5 ✅ in Zen only, as a rhythm line written by the 20 Hz display tick (no animations, so no keystroke-latency cost) · A6 → only as Zen's optional ambient pad, never in Arcade. A4 not built.
 
 | # | Add-on | What it adds | Guardrail fit | Cost / risk | Suggestion |
 |---|---|---|---|---|---|
@@ -357,9 +359,9 @@ Ideas that came up during R1. **None is implemented.** Each needs your go-ahead,
 
 | # | Task | UX / engagement value | Approach | Risk → mitigation |
 |---|---|---|---|---|
-| R2.1 | **Result screen** (U3) | Shows progress and near-misses | Show **words, best combo, accuracy, time, WPM**, plus "NEW BEST" or "N words from your best". Same layout style as now, no extra buttons beyond PLAY AGAIN (and SHARE in R4). | Clutter → max 5 figures, quiet typography. WPM = `correctCharacters / 5 ÷ active minutes`, hidden ("—") for runs under 5 s so tiny runs don't show absurd numbers |
-| R2.2 | **Instant replay** (U4) | Removes friction between runs | `Enter`/`Space`/click on game over starts a fresh run directly (new engine event `playAgain`) | Fast typists skip the result by accident → **0.7 s input lock** after game over (tune in playtest) |
-| R2.3 | **Esc / Enter resumes** (U5) | Keyboard flow | Extend the existing key handler to the `paused` screen | none |
+| R2.1 ✅ | **Result screen** (U3) | Shows progress and near-misses | Show **words, best combo, accuracy, time, WPM**, plus "NEW BEST" or "N words from your best". Same layout style as now, no extra buttons beyond PLAY AGAIN (and SHARE in R4). | Clutter → max 5 figures, quiet typography. WPM = `correctCharacters / 5 ÷ active minutes`, hidden ("—") for runs under 5 s so tiny runs don't show absurd numbers |
+| R2.2 ✅ | **Instant replay** (U4) | Removes friction between runs | `Enter`/`Space`/click on game over starts a fresh run directly (new engine event `playAgain`) | Fast typists skip the result by accident → **0.7 s input lock** after game over (tune in playtest) |
+| R2.3 ✅ | **Esc / Enter resumes** (U5) | Keyboard flow | Extend the existing key handler to the `paused` screen | none |
 | R2.4 | **Personal bests (local)** | Mastery without accounts | `ica-stats` JSON: best words, best WPM, best combo, total runs. Extends `storage.ts`. | Corrupt/blocked storage → **versioned schema** (`v:1`), validated and clamped on read, falls back to zeros, never throws |
 | R2.5 | **Readability pass** (U2) | The core text is hard to read | Raise colours, keep the hierarchy: untyped letters `#555 → #666+` (≥3:1, large text); small labels to `#7a7a7a` (4.6:1, AA); minimum label size 11 px (mobile too) | Loses the "quiet" look → change values only, not layout; compare before/after screenshots; keep typed vs untyped contrast obvious |
 | R2.6 | **One-line rules hint** (U7) | New players understand what's going on | One muted line on the ready screen: *"Finish each word before the line runs out. Mistakes cost time."* | Clutter → one line, no tutorial or modal (G1) |

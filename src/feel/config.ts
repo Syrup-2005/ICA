@@ -37,8 +37,30 @@ export const FEEL = {
     maxVoices: 6,
     pitchJitter: 0.04, // ±4%
     volumeJitter: 0.1, // ±10%
-    comboBaseHz: 196, // G3; rises one semitone per combo step, wrapping each octave
+    comboBaseHz: 196, // G3; rises one pentatonic step per combo, over two octaves, then wraps
+    room: 0.22, // send into the small synthesised room (reverb), before each character's own amount
   },
+
+  // Zen ambient pad: a slow, low, filtered chord in G (same key as the combo notes).
+  // Fades in when a zen session runs, out on pause/end. Gain is relative to the SOUND level.
+  ambient: {
+    gain: 0.11,
+    fadeInS: 4,
+    fadeOutS: 1.2,
+    chordEveryMs: 22_000,
+    glideS: 3, // time constant of the glide between chords
+    filterHz: 650,
+    // Gadd9 → Em7 → Cmaj7 → Dsus2 (Hz). All inside G major pentatonic + its gentle neighbours.
+    chords: [
+      [98.0, 146.83, 220.0, 246.94],
+      [82.41, 123.47, 196.0, 293.66],
+      [65.41, 130.81, 196.0, 246.94],
+      [73.42, 110.0, 220.0, 329.63],
+    ],
+  },
+
+  // Typing rhythm reading (add-on A5): see RhythmTracker in rules.ts.
+  rhythm: { window: 8, minGaps: 4, resetMs: 1500, looseCv: 0.6, holdMs: 1200, fadeMs: 1500 },
 
   // Vibration lengths (ms). Android only; ignored elsewhere.
   haptics: { correct: 8, wrong: 20, complete: 15, milestone: 30 },

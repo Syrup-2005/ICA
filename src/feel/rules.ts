@@ -3,9 +3,16 @@ import { FEEL } from './config'
 
 export type EffectsLevel = 'full' | 'subtle' | 'off'
 export type SoundLevel = 'off' | 'low' | 'med' | 'high'
+export type SoundCharacter = 'soft' | 'thock' | 'wood' | 'pebble'
 
 export const EFFECTS_LEVELS: readonly EffectsLevel[] = ['full', 'subtle', 'off']
 export const SOUND_LEVELS: readonly SoundLevel[] = ['off', 'low', 'med', 'high']
+export const SOUND_CHARACTERS: readonly SoundCharacter[] = ['soft', 'thock', 'wood', 'pebble']
+
+// Returns `value` if it is one of `list`, else `fallback` (for values read from storage).
+export function pick<T extends string>(list: readonly T[], value: string | null, fallback: T): T {
+  return value !== null && (list as readonly string[]).includes(value) ? (value as T) : fallback
+}
 
 export function nextInCycle<T>(list: readonly T[], current: T): T {
   return list[(list.indexOf(current) + 1) % list.length]
@@ -17,10 +24,15 @@ export function resolveEffects(saved: string | null, prefersReducedMotion: boole
   return prefersReducedMotion ? 'subtle' : 'full'
 }
 
-// Pitch of the word-complete sound: one semitone up per combo step, wrapping each octave.
+// Major pentatonic steps (semitones). Any sequence of these notes sounds consonant, with each
+// other and with the zen ambient pad (same key), so a long combo becomes a gentle melody.
+export const PENTATONIC = [0, 2, 4, 7, 9] as const
+
+// Pitch of the word-complete sound: one pentatonic step up per combo step, over two octaves, then wraps.
 export function comboFrequency(combo: number, baseHz: number = FEEL.sound.comboBaseHz): number {
-  const step = (Math.max(1, Math.floor(combo)) - 1) % 12
-  return baseHz * 2 ** (step / 12)
+  const step = (Math.max(1, Math.floor(combo)) - 1) % (PENTATONIC.length * 2)
+  const semitones = PENTATONIC[step % PENTATONIC.length] + 12 * Math.floor(step / PENTATONIC.length)
+  return baseHz * 2 ** (semitones / 12)
 }
 
 // 1 for relaxed typing, down to minIntensity for very fast bursts.
@@ -97,5 +109,40 @@ export class SlowFrameDetector {
     this.streak = frameMs > this.cfg.slowFrameMs ? this.streak + 1 : 0
     if (this.streak >= this.cfg.consecutive) this.tripped = true
     return this.tripped
+  }
+}
+
+// Typing rhythm (add-on A5): how even the gaps between recent keystrokes are.
+// 1 = metronome-steady, 0 = erratic or idle. Pauses longer than resetMs start a new phrase,
+// so stopping to think is never "bad rhythm"; the reading fades out after the player stops.
+export class RhythmTracker {
+  private gaps: number[] = []
+  private last = -Infinity
+  private readonly cfg: typeof FEEL.rhythm
+  constructor(cfg: typeof FEEL.rhythm = FEEL.rhythm) {
+    this.cfg = cfg
+  }
+  key(t: number): void {
+    const gap = t - this.last
+    this.last = t
+    if (gap > this.cfg.resetMs) {
+      this.gaps = []
+      return
+    }
+    this.gaps.push(gap)
+    if (this.gaps.length > this.cfg.window) this.gaps.shift()
+  }
+  steadiness(t: number): number {
+    if (this.gaps.length < this.cfg.minGaps) return 0
+    const mean = this.gaps.reduce((a, b) => a + b, 0) / this.gaps.length
+    const spread = Math.sqrt(this.gaps.reduce((a, g) => a + (g - mean) ** 2, 0) / this.gaps.length)
+    const even = Math.min(1, Math.max(0, 1 - spread / mean / this.cfg.looseCv))
+    const idle = t - this.last
+    const fade = Math.min(1, Math.max(0, 1 - (idle - this.cfg.holdMs) / this.cfg.fadeMs))
+    return even * fade
+  }
+  reset(): void {
+    this.gaps = []
+    this.last = -Infinity
   }
 }
