@@ -3,6 +3,8 @@ import { FEEL } from './config'
 import {
   EFFECTS_LEVELS,
   EffectBudget,
+  RhythmTracker,
+  SOUND_CHARACTERS,
   SOUND_LEVELS,
   SlowFrameDetector,
   VoicePool,
@@ -12,14 +14,22 @@ import {
   jitter,
   nextBeatAt,
   nextInCycle,
+  pick,
   resolveEffects,
 } from './rules'
+import { CHARACTERS } from './characters'
 
 describe('settings', () => {
   it('cycles through levels and wraps', () => {
     expect(nextInCycle(EFFECTS_LEVELS, 'full')).toBe('subtle')
     expect(nextInCycle(EFFECTS_LEVELS, 'off')).toBe('full')
     expect(nextInCycle(SOUND_LEVELS, 'high')).toBe('off')
+  })
+
+  it('picks a saved value only if it is valid', () => {
+    expect(pick(SOUND_CHARACTERS, 'wood', 'soft')).toBe('wood')
+    expect(pick(SOUND_CHARACTERS, 'kazoo', 'soft')).toBe('soft')
+    expect(pick(SOUND_CHARACTERS, null, 'thock')).toBe('thock')
   })
 
   it('uses a saved effects choice, else follows reduced motion', () => {
@@ -31,13 +41,20 @@ describe('settings', () => {
 })
 
 describe('sound shaping', () => {
-  it('rises one semitone per combo step and wraps each octave', () => {
+  it('climbs the major pentatonic scale over two octaves, then wraps', () => {
     const base = FEEL.sound.comboBaseHz
+    const at = (semitones: number) => base * 2 ** (semitones / 12)
     expect(comboFrequency(1)).toBeCloseTo(base)
-    expect(comboFrequency(2)).toBeCloseTo(base * 2 ** (1 / 12))
-    expect(comboFrequency(12)).toBeCloseTo(base * 2 ** (11 / 12))
-    expect(comboFrequency(13)).toBeCloseTo(base)
+    expect(comboFrequency(2)).toBeCloseTo(at(2))
+    expect(comboFrequency(4)).toBeCloseTo(at(7))
+    expect(comboFrequency(6)).toBeCloseTo(at(12))
+    expect(comboFrequency(10)).toBeCloseTo(at(21))
+    expect(comboFrequency(11)).toBeCloseTo(base)
     expect(comboFrequency(0)).toBeCloseTo(base)
+  })
+
+  it('has a profile for every sound character', () => {
+    for (const c of SOUND_CHARACTERS) expect(CHARACTERS[c].label).toBe(c.toUpperCase())
   })
 
   it('softens per-key intensity as typing speeds up, within bounds', () => {
@@ -119,5 +136,41 @@ describe('per-key motion threshold', () => {
   it('allows per-key motion only below ~105 WPM bursts (≥ ~115 ms between keys)', () => {
     expect(cadenceIntensity(110)).toBeLessThan(FEEL.cadence.motionFrom)
     expect(cadenceIntensity(120)).toBeGreaterThanOrEqual(FEEL.cadence.motionFrom)
+  })
+})
+
+describe('typing rhythm (A5)', () => {
+  const typeAt = (tracker: RhythmTracker, times: number[]) => times.forEach((t) => tracker.key(t))
+
+  it('reads 0 until there are enough keystrokes', () => {
+    const r = new RhythmTracker()
+    typeAt(r, [0, 200, 400])
+    expect(r.steadiness(400)).toBe(0)
+  })
+
+  it('reads ~1 for an even cadence and lower for an uneven one', () => {
+    const even = new RhythmTracker()
+    typeAt(even, [0, 200, 400, 600, 800, 1000])
+    expect(even.steadiness(1000)).toBeCloseTo(1)
+    const uneven = new RhythmTracker()
+    typeAt(uneven, [0, 60, 400, 450, 900, 960])
+    expect(uneven.steadiness(960)).toBeLessThan(0.4)
+  })
+
+  it('treats a long pause as a new phrase, not bad rhythm', () => {
+    const r = new RhythmTracker()
+    typeAt(r, [0, 200, 400, 600, 800, 5000])
+    expect(r.steadiness(5000)).toBe(0)
+    typeAt(r, [5200, 5400, 5600, 5800])
+    expect(r.steadiness(5800)).toBeCloseTo(1)
+  })
+
+  it('fades out after the player stops typing', () => {
+    const r = new RhythmTracker()
+    typeAt(r, [0, 200, 400, 600, 800])
+    const { holdMs, fadeMs } = FEEL.rhythm
+    expect(r.steadiness(800 + holdMs)).toBeCloseTo(1)
+    expect(r.steadiness(800 + holdMs + fadeMs / 2)).toBeCloseTo(0.5)
+    expect(r.steadiness(800 + holdMs + fadeMs)).toBe(0)
   })
 })

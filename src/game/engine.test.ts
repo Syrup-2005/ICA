@@ -6,6 +6,7 @@ import {
   createInitialState,
   gameReducer,
   getAccuracy,
+  getWpm,
   nextDeadline,
   type GameEvent,
   type GameState,
@@ -241,5 +242,90 @@ describe('nextDeadline (replaces 50 ms polling)', () => {
     expect(scheduled).toEqual(polled)
     expect(scheduled.elapsed).toBe(MAX_HEALTH)
     expect(ticks).toBe(2) // combo expiry, then survival running out (vs 100 polling ticks)
+  })
+})
+
+describe('zen mode (no timer, no failure)', () => {
+  const zen = (seed = 42) => run(createInitialState(0), { type: 'start', now: T0, seed, mode: 'zen' })
+
+  it('never drains survival or ends on its own', () => {
+    const s = run(zen(), { type: 'tick', now: T0 + 60 * MAX_HEALTH })
+    expect(s.screen).toBe('playing')
+    expect(s.health).toBe(MAX_HEALTH)
+    expect(s.elapsed).toBe(60 * MAX_HEALTH)
+    expect(nextDeadline(s)).toBeNull()
+  })
+
+  it('mistakes cost no time and quietly reset the streak', () => {
+    let s = typeWord(typeWord(zen(), T0), T0 + 9000) // a pause between words never breaks the streak
+    expect(s.combo).toBe(2)
+    for (let i = 0; i < 20; i++) s = gameReducer(s, { type: 'input', value: s.typed + wrongLetter(s), now: T0 + 9000 })
+    expect(s.screen).toBe('playing')
+    expect(s.health).toBe(MAX_HEALTH)
+    expect(s.combo).toBe(0)
+    expect(s.runBestCombo).toBe(2)
+    expect(s.comboBreakId).toBe(0)
+  })
+
+  it('stays in comfortable word lengths and never touches the arcade best combo', () => {
+    let s = run(createInitialState(3), { type: 'start', now: T0, seed: 5, mode: 'zen' })
+    for (let i = 0; i < 70; i++) s = typeWord(s, T0 + i)
+    expect(s.word.length).toBeLessThanOrEqual(8)
+    expect(s.bestCombo).toBe(3)
+  })
+
+  it('end stops the run and shows the result; replay keeps the mode', () => {
+    const ended = run(typeWord(zen(), T0 + 1000), { type: 'end', now: T0 + 2000 })
+    expect(ended.screen).toBe('gameover')
+    expect(ended.elapsed).toBe(2000)
+    expect(ended.wordsCompleted).toBe(1)
+    const again = run(ended, { type: 'playAgain', now: T0 + 5000, seed: 9 })
+    expect(again.screen).toBe('playing')
+    expect(again.mode).toBe('zen')
+    expect(again.wordsCompleted).toBe(0)
+  })
+
+  it('the mode can only change on the ready screen, and the next start uses it', () => {
+    const ready = run(createInitialState(), { type: 'setMode', mode: 'zen' })
+    expect(ready.mode).toBe('zen')
+    const s = run(ready, { type: 'start', now: T0, seed: 1 })
+    expect(s.mode).toBe('zen')
+    expect(run(s, { type: 'setMode', mode: 'arcade' })).toBe(s)
+    expect(run(s, { type: 'restart' }).mode).toBe('zen')
+  })
+
+  it('end also works from pause', () => {
+    const s = run(zen(), { type: 'pause', now: T0 + 1000 }, { type: 'end', now: T0 + 50_000 })
+    expect(s.screen).toBe('gameover')
+    expect(s.elapsed).toBe(1000)
+  })
+})
+
+describe('result helpers and replay', () => {
+  it('playAgain only acts on the result screen', () => {
+    const s = started()
+    expect(run(s, { type: 'playAgain', now: T0, seed: 3 })).toBe(s)
+  })
+
+  it('playAgain starts a fresh arcade run and keeps the all-time best', () => {
+    const over = run(typeWord(started(), T0), { type: 'tick', now: T0 + MAX_HEALTH })
+    expect(over.screen).toBe('gameover')
+    const again = run(over, { type: 'playAgain', now: T0 + 9000, seed: 3 })
+    expect(again.screen).toBe('playing')
+    expect(again.mode).toBe('arcade')
+    expect(again.bestCombo).toBe(1)
+    expect(again.runBestCombo).toBe(0)
+    expect(again.health).toBe(MAX_HEALTH)
+  })
+
+  it('tracks the best combo within the run', () => {
+    const s = typeWord(typeWord(started(), T0), T0 + 100)
+    expect(s.runBestCombo).toBe(2)
+  })
+
+  it('WPM is hidden for very short runs, then correct characters / 5 per active minute', () => {
+    expect(getWpm({ correctCharacters: 40, elapsed: 4999 })).toBeNull()
+    expect(getWpm({ correctCharacters: 300, elapsed: 60_000 })).toBe(60)
+    expect(getWpm({ correctCharacters: 25, elapsed: 10_000 })).toBe(30)
   })
 })

@@ -31,7 +31,7 @@ The production website is generated in `dist/`.
 npm test
 ```
 
-See `docs/ICA-Project-Guide.md` for architecture and `CHANGELOG.md` for changes.
+See `docs/DEVELOPER.md` for architecture, configuration and how-tos, `docs/ICA-Project-Guide.md` for project history and design rationale, and `CHANGELOG.md` for changes.
 
 ## Adding words
 
@@ -56,6 +56,10 @@ Fails if the JS, fonts or first-load size exceed the budgets in `scripts/check-s
 
 ## Current MVP features
 
+- Two modes, chosen on the start screen: **Arcade** (survival meter, combos, game over) and **Zen** (no timer, no failure, endless, optional ambient pad, a rhythm line that settles as your typing evens out)
+- Four synthesised key sounds to pick from before you start (soft, thock, wood, pebble), with a preview
+- Words shown as keycaps that press in as you type
+- Result screen (words, best combo, accuracy, time, WPM, new best) and instant replay with Enter/Space
 - Press any key or click to start
 - One word at a time
 - Adaptive word-length milestones
@@ -64,7 +68,7 @@ Fails if the JS, fonts or first-load size exceed the budgets in `scripts/check-s
 - Best combo saved in localStorage
 - Elapsed time, completed words and accuracy
 - Weighty typing feedback: synthesised key sounds (no audio files), a combo pitch that climbs, letter and word motion, a heartbeat when survival runs low
-- `SOUND` (off / low / med / high) and `FX` (full / subtle / off) controls; FX follows the system's reduced-motion setting until you choose
+- `SOUND` (off / low / med / high; LOW by default) and `FX` (full / subtle / off) controls; FX follows the system's reduced-motion setting until you choose
 - Pause and restart; auto-pause when you switch tabs or apps (Esc or Enter resumes)
 
 ## Notes

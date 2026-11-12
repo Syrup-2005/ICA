@@ -44,10 +44,12 @@ function glow(el: Element | null, strength: number): void {
 //   danger  survival < 1.5 s          → heartbeat (here) + meter pulse (PlayScreen)
 // FULL = everything; SUBTLE = no movement (colour cues stay); OFF = no visual effects or haptics.
 // During fast bursts per-key motion steps aside (sound carries the feel), so it never costs a frame.
+// Zen is gentler: a wrong key is a soft muted tap and the ghost letter, never a shake; no heartbeat.
 export function useFeel(state: GameState, effects: EffectsLevel, soundOn: boolean, refs: FeelRefs): void {
   const budget = useRef(new EffectBudget(FEEL.budget.tier3GapMs))
   const lastKeyAt = useRef(-Infinity)
-  const { feedback, feedbackId, combo, comboBreakId, screen, lastTickAt, health } = state
+  const { feedback, feedbackId, combo, comboBreakId, screen, lastTickAt, health, mode } = state
+  const zen = mode === 'zen'
 
   // Layout effect: runs before paint, so sound and motion land on the same frame as the letter.
   useLayoutEffect(() => {
@@ -66,8 +68,8 @@ export function useFeel(state: GameState, effects: EffectsLevel, soundOn: boolea
       }
       if (visual) vibrate(FEEL.haptics.correct)
     } else if (feedback === 'wrong') {
-      sound.thud()
-      if (motion) animate(refs.stage.current, shake(FEEL.motion.shakePx), FEEL.timing.shakeMs)
+      sound.thud(zen)
+      if (motion && !zen) animate(refs.stage.current, shake(FEEL.motion.shakePx), FEEL.timing.shakeMs)
       if (visual) vibrate(FEEL.haptics.wrong)
     } else if (feedback === 'complete') {
       lastKeyAt.current = t
@@ -96,7 +98,7 @@ export function useFeel(state: GameState, effects: EffectsLevel, soundOn: boolea
 
   // Heartbeat while survival is below the danger threshold, on a fixed phase.
   useEffect(() => {
-    if (!soundOn || screen !== 'playing' || lastTickAt === null) return
+    if (!soundOn || zen || screen !== 'playing' || lastTickAt === null) return
     const dangerAt = lastTickAt + health - FEEL.danger.thresholdMs
     let id = 0
     const schedule = () => {
@@ -108,5 +110,5 @@ export function useFeel(state: GameState, effects: EffectsLevel, soundOn: boolea
     }
     schedule()
     return () => window.clearTimeout(id)
-  }, [soundOn, screen, lastTickAt, health])
+  }, [soundOn, zen, screen, lastTickAt, health])
 }
